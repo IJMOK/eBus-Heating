@@ -33,6 +33,7 @@ once in the Node-RED flows' config node.
 
 ## Allowed IP addresses
 
-Only `127.0.0.1`, `0.0.0.0` and the documentation range `192.0.2.0/24` may
+Only `127.0.0.1`, `0.0.0.0`, the documentation range `192.0.2.0/24` and
+the eBUS stick's factory setup address `192.168.4.1` may
 appear in this repo. [`tools/scan-secrets.sh`](tools/scan-secrets.sh) flags
 everything else.
