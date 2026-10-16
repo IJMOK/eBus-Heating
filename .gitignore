@@ -1,0 +1,20 @@
+# Secrets and credentials
+secrets.yaml
+**/secrets.yaml
+*.env
+.env*
+*.pem
+*.key
+flows_cred.json
+.config.*.json
+
+# Real (unsanitised) exports - keep these in a private repo
+*.private.*
+private/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
