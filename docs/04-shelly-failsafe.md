@@ -45,8 +45,14 @@ mains wiring yet. Leave `L`, `N`, `+`, `O`, `I` and `SW` empty.
 2. Shelly web UI → **Components → Add device**. Press the BLU's button once while
    it scans. Add it with temperature, humidity and battery.
 3. Note the temperature component id (e.g. `bthomesensor:203`) for the script.
-4. Check the signal on `bthomedevice:2xx` → `rssi`. Better than about −85 dBm at
-   its final position.
+4. Check the signal with `BTHomeDevice.GetStatus` (`rssi`, `last_updated_ts`).
+   Better than about −85 dBm at its final position.
+   **`Shelly.GetStatus` does not include BTHome components** (firmware 2.0.1). Use
+   `BTHomeDevice.GetStatus` / `BTHomeSensor.GetStatus` or `Shelly.GetComponents`,
+   otherwise a working sensor looks dead.
+5. Add it as a **component only, don't pair it**. If it ends up under Bluetooth →
+   *Paired devices*, delete it there. Paired, the Shelly keeps trying to connect to
+   it, and readings drop out while connected.
 
 ## 3. Into Home Assistant
 
