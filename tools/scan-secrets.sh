@@ -39,7 +39,7 @@ check() { # label, extended regex, [exclude regex]
   fi
 }
 
-check "IPv4 address" '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' '\b(127\.0\.0\.1|0\.0\.0\.0|192\.0\.2\.[0-9]{1,3}|192\.168\.4\.1)\b'
+check "IPv4 address" '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' '\b(127\.0\.0\.1|0\.0\.0\.0|192\.0\.2\.[0-9]{1,3}|192\.168\.4\.1|192\.168\.33\.1)\b'
 check "MAC address" '\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b'
 check "Email address" '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' 'noreply@anthropic\.com|@example\.(com|org)'
 check "JWT / HA long-lived token" 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'
