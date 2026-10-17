@@ -97,16 +97,14 @@ controller on the bus there's less traffic, but the boiler itself still talks.
    seed_mqtt_cfg: true                      # adds --mqttint=mqtt-hassio.cfg and --mqttjson
    commandline_options:
      - "--scanconfig"
-     - "--accesslevel=*"
      - "--pollinterval=30"
      - "--httpport=8889"                    # read-only JSON: http://<HA_HOST>:8889/data
    ```
 
    - The Mosquitto add-on's host, user and password are picked up automatically.
      Don't set `--mqtthost` unless you're using an external broker.
-   - `--accesslevel=*` makes every message definition visible, including
-     the install-level writes we need later. Visible is not the same as written:
-     nothing is written until a flow does it.
+   - No `--accesslevel` yet: without it ebusd can't write to the boiler at all.
+     See the access-level section below for when to add it.
    - *Untested:* check the option names against the add-on's Configuration tab,
      because the schema has changed between versions.
 3. Start it and watch the log. You want to see:
@@ -174,8 +172,20 @@ hcmode;flowtempdesired;hwctempdesired;hwcflowtempdesired;ign;disablehc;disablehw
 With `--accesslevel=*`, ebusd will also write installer settings such as
 `FlowsetHcMax`, `PartloadHcKW`, fan-speed offsets and **`SetFactoryValues`**.
 Anything that can publish to the broker can then change them, and depending on
-`mqtt-hassio.cfg` they may show up as controls in HA. If `SetMode` is writable
-without it on your boiler, **leave `--accesslevel` off**.
+`mqtt-hassio.cfg` they may show up as controls in HA.
+
+On the BAI00 tested here, the active `SetMode` write needs the same access level,
+so there's no setting that allows only `SetMode`. That gives a useful staging:
+
+- **Until you start writing (shadow stage): leave `--accesslevel` off.** ebusd
+  then can't write anything, whatever a flow or dashboard does. Check with
+  `curl "http://<HA_HOST>:8889/data/bai?def&write"`: only passive messages
+  should have `"write": true`.
+- **When you start writing**, either turn it on and keep the installer messages
+  out of HA in `mqtt-hassio.cfg`, or add a custom definition that makes only
+  `SetMode` writable.
+
+In the add-on config above, add `--accesslevel=*` only at that point.
 
 ## Alternative: micro-ebusd
 
