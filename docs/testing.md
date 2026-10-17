@@ -29,3 +29,5 @@ Restore everything after each test (battery back in, add-ons running, `heating_l
 | 2026-10-17 | Script on real firmware (2.0.1) | Runs, about 1.5 KB memory, mode `ha` during the 15-min grace period ✅ |
 | 2026-10-17 | No heartbeat (HA in dry-run) | After 15 min: mode **`local`**, relay off at 23 °C (> 20.5) ✅ |
 | 2026-10-17 | Mode to HA | Retained MQTT → Node-RED → `input_text.heating_failsafe_mode` = `local`, logbook entry and notifications ✅ |
+| 2026-10-17 | Live control on (`heating_live`) | Heartbeat over MQTT RPC; Shelly back to **`ha`** within 30 s; "HA is back in control" logged; HA kept the relay off (room above set) ✅ |
+| 2026-10-17 | Live control off again (test 6) | Heartbeat stopped; after **15 min** Shelly back to **`local`** ✅ |
