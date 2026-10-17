@@ -1,1 +1,161 @@
-# Heating dashboard. Written in P2.
+# Heating dashboard. Create a new dashboard (Settings → Dashboards → Add → New from scratch),
+# open it → ⋮ → Edit → ⋮ → Raw configuration editor, and paste this file.
+title: Heating
+views:
+  - title: Heating
+    path: heating
+    icon: mdi:radiator
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Now
+          - type: markdown
+            content: >-
+              **{{ states('input_text.heating_status') }}**
+
+
+              Stage **{{ states('input_select.heating_stage') }}** ·
+              {{ 'LIVE' if is_state('input_boolean.heating_live', 'on') else 'dry-run' }} ·
+              floor {{ states('input_number.heating_stage_floor') }} °C ·
+              slope {{ states('input_number.heating_slope') }} ·
+              offset {{ states('input_number.heating_offset') }} °C
+
+
+              Days to promotion: **{{ [7 - states('input_number.heating_good_days') | int(0), 0] | max }}**
+              ({{ states('input_number.heating_good_days') | int(0) }}/7 good days)
+
+
+              Last decision: {{ states('input_text.heating_last_decision') }}
+          - type: tile
+            entity: sensor.room_temperature
+            name: Room
+          - type: tile
+            entity: input_number.heating_setpoint
+            name: Set
+          - type: tile
+            entity: sensor.outdoor_temperature
+            name: Outdoor
+          - type: tile
+            entity: input_number.heating_flow_target
+            name: Flow target
+          - type: tile
+            entity: sensor.ebusd_flow_temperature
+            name: Flow
+          - type: tile
+            entity: sensor.ebusd_return_temperature
+            name: Return
+          - type: tile
+            entity: input_boolean.heating_demand
+            name: Demand
+          - type: tile
+            entity: input_boolean.heating_flame
+            name: Flame
+          - type: tile
+            entity: input_number.heating_boiler_modulation
+            name: Modulation
+          - type: tile
+            entity: input_number.heating_burner_minutes_today
+            name: Burner today
+          - type: tile
+            entity: input_button.heating_comfort_mode
+            name: Comfort mode (4 h)
+            tap_action:
+              action: toggle
+          - type: tile
+            entity: timer.heating_comfort_mode
+            name: Comfort mode left
+      - type: grid
+        cards:
+          - type: heading
+            heading: Room and weather
+          - type: history-graph
+            hours_to_show: 48
+            entities:
+              - entity: sensor.room_temperature
+                name: Room
+              - entity: input_number.heating_setpoint
+                name: Set
+          - type: history-graph
+            hours_to_show: 48
+            entities:
+              - entity: sensor.outdoor_temperature
+                name: Outdoor
+          - type: heading
+            heading: Boiler
+          - type: history-graph
+            hours_to_show: 24
+            entities:
+              - entity: input_number.heating_flow_target
+                name: Target
+              - entity: input_number.heating_flow_curve
+                name: Curve (unclamped)
+              - entity: sensor.ebusd_flow_temperature
+                name: Flow
+              - entity: sensor.ebusd_return_temperature
+                name: Return
+          - type: history-graph
+            hours_to_show: 24
+            entities:
+              - entity: input_number.heating_boiler_modulation
+                name: Modulation
+          - type: history-graph
+            hours_to_show: 24
+            entities:
+              - entity: input_boolean.heating_period
+                name: Period
+              - entity: input_boolean.heating_demand
+                name: Demand
+              - entity: input_boolean.heating_flame
+                name: Flame
+      - type: grid
+        cards:
+          - type: heading
+            heading: Handover
+          - type: entities
+            entities:
+              - entity: input_select.heating_stage
+              - entity: input_boolean.heating_live
+              - entity: input_number.heating_good_days
+              - entity: input_boolean.heating_comfort_event_today
+              - entity: input_button.heating_approve_promotion
+              - entity: input_number.heating_integral
+          - type: heading
+            heading: Tuning
+          - type: entities
+            entities:
+              - entity: input_number.heating_slope
+              - entity: input_number.heating_offset
+              - entity: input_number.heating_kp
+              - entity: input_number.heating_ki
+              - entity: input_number.heating_stage_floor
+          - type: heading
+            heading: Schedule
+          - type: entities
+            entities:
+              - entity: input_number.heating_setpoint_day
+              - entity: input_number.heating_setpoint_night
+              - entity: input_number.heating_preheat_minutes
+              - entity: input_number.heating_alarm_hold_minutes
+              - entity: input_number.heating_boost_minutes
+              - entity: input_datetime.heating_weekday_evening_start
+              - entity: input_datetime.heating_weekend_start
+              - entity: input_datetime.heating_period_end
+              - entity: sensor.phone_next_alarm
+                name: Next alarm
+          - type: heading
+            heading: Boiler health
+          - type: entities
+            entities:
+              - entity: sensor.ebusd_water_pressure
+                name: Pressure
+              - entity: sensor.ebusd_heating_starts
+                name: Heating starts
+              - entity: sensor.ebusd_heating_hours
+                name: Heating hours
+              - entity: binary_sensor.ebusd_signal
+                name: eBUS signal
+              - entity: sensor.room_sensor_battery
+                name: Room sensor battery

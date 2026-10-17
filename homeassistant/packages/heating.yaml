@@ -1,1 +1,191 @@
-# Heating helpers: tunables, stage, dry-run switch. Written in P2.
+# Heating: tunables, handover stage and outputs for the Node-RED heating flows.
+#
+# No `initial:` values on purpose: HA then restores the last value after a restart,
+# so learned values survive. Starting values are set once with the
+# "Set starting values" button on the Node-RED 40 tab.
+
+input_boolean:
+  heating_live:
+    name: Heating live control
+    icon: mdi:radiator
+    # off = dry-run: everything is calculated and logged, nothing is switched or written
+  heating_comfort_event_today:
+    name: Heating comfort event today
+    icon: mdi:snowflake-alert
+  # Mirrors written by Node-RED
+  heating_demand:
+    name: Heating demand (controller)
+    icon: mdi:fire
+  heating_period:
+    name: Heating period active
+    icon: mdi:calendar-clock
+  heating_flame:
+    name: Boiler flame
+    icon: mdi:fire-circle
+
+input_select:
+  heating_stage:
+    name: Heating stage
+    icon: mdi:stairs
+    options:
+      - "0 Shadow"
+      - "1 Capped"
+      - "2 Assisted"
+      - "3 Auto"
+
+input_number:
+  # --- Tunables (learning adjusts slope, offset and floor) ---
+  heating_slope:
+    name: Heating curve slope
+    min: 0.8
+    max: 2.5
+    step: 0.05
+    mode: box
+  heating_offset:
+    name: Heating curve offset
+    min: -10
+    max: 15
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+  heating_kp:
+    name: Heating Kp
+    min: 0
+    max: 10
+    step: 0.1
+    mode: box
+  heating_ki:
+    name: Heating Ki (per min)
+    min: 0
+    max: 0.2
+    step: 0.005
+    mode: box
+  heating_stage_floor:
+    name: Heating stage floor
+    min: 25
+    max: 60
+    step: 1
+    unit_of_measurement: "°C"
+    mode: box
+  heating_setpoint_day:
+    name: Heating setpoint day
+    min: 15
+    max: 23
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+  heating_setpoint_night:
+    name: Heating setpoint night
+    min: 10
+    max: 20
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+  heating_preheat_minutes:
+    name: Heating preheat before alarm
+    min: 0
+    max: 180
+    step: 5
+    unit_of_measurement: min
+    mode: box
+  heating_alarm_hold_minutes:
+    name: Heating on after alarm
+    min: 0
+    max: 180
+    step: 5
+    unit_of_measurement: min
+    mode: box
+  heating_boost_minutes:
+    name: Heating warm-up boost
+    min: 0
+    max: 90
+    step: 5
+    unit_of_measurement: min
+    mode: box
+
+  # --- Outputs written by Node-RED (for the dashboard and history) ---
+  heating_flow_target:
+    name: Heating flow target
+    min: 20
+    max: 60
+    step: 0.1
+    unit_of_measurement: "°C"
+    mode: box
+  heating_flow_curve:
+    name: Heating flow curve (unclamped)
+    min: 0
+    max: 100
+    step: 0.1
+    unit_of_measurement: "°C"
+    mode: box
+  heating_integral:
+    name: Heating integral
+    min: -5
+    max: 5
+    step: 0.01
+    unit_of_measurement: "°C"
+    mode: box
+  heating_good_days:
+    name: Heating good days
+    min: 0
+    max: 60
+    step: 1
+    unit_of_measurement: days
+    mode: box
+  heating_setpoint:
+    name: Heating setpoint now
+    min: 5
+    max: 25
+    step: 0.1
+    unit_of_measurement: "°C"
+    mode: box
+  heating_boiler_modulation:
+    name: Boiler modulation
+    min: 0
+    max: 100
+    step: 0.1
+    unit_of_measurement: "%"
+    mode: box
+  heating_burner_minutes_today:
+    name: Burner minutes today
+    min: 0
+    max: 1440
+    step: 1
+    unit_of_measurement: min
+    mode: box
+
+input_datetime:
+  heating_weekday_evening_start:
+    name: Heating weekday evening start
+    has_date: false
+    has_time: true
+  heating_period_end:
+    name: Heating period end
+    has_date: false
+    has_time: true
+  heating_weekend_start:
+    name: Heating weekend start
+    has_date: false
+    has_time: true
+
+input_text:
+  heating_status:
+    name: Heating status
+    max: 255
+  heating_last_decision:
+    name: Heating last decision
+    max: 255
+
+input_button:
+  heating_comfort_mode:
+    name: Heating comfort mode (4 h at 60 °C)
+    icon: mdi:fire-alert
+  heating_approve_promotion:
+    name: Heating approve promotion
+    icon: mdi:check-decagram
+
+timer:
+  heating_comfort_mode:
+    name: Heating comfort mode
+    duration: "04:00:00"
+    restore: true
