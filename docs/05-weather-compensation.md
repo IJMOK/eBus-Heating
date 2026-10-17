@@ -54,7 +54,7 @@ timer.
 
 | Day | Heating periods (day setpoint) |
 |---|---|
-| Weekday with a phone alarm today | `alarm − preheat` to `alarm + hold`, then evening start to period end |
+| Weekday with a phone alarm today | `earliest alarm − preheat` to `latest alarm + hold`, then evening start to period end |
 | Weekday without an alarm | Weekend start to period end |
 | Weekend | Weekend start to period end |
 
@@ -62,9 +62,10 @@ Helpers: `heating_preheat_minutes` (60), `heating_alarm_hold_minutes` (60),
 `heating_weekday_evening_start` (16:00), `heating_weekend_start` (09:00),
 `heating_period_end` (22:30).
 
-- The alarm comes from the phone's **next alarm** sensor, if it falls today
-  between 04:00 and 10:00. It is remembered after it has rung.
-- If the phone sensor is unavailable on a weekday, the flow assumes 06:00, unless
+- Alarms come from each phone's **next alarm** sensor, if they fall today
+  between 04:00 and 10:00. The earliest starts the preheat and the latest sets the
+  end of the morning. Each is remembered after it has rung.
+- If every phone sensor is unavailable on a weekday, the flow assumes 06:00, unless
   an "alarm off" calendar has an entry active now.
 
 ## Combi boilers and hot water

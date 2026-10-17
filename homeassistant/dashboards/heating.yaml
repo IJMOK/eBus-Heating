@@ -143,8 +143,10 @@ views:
               - entity: input_datetime.heating_weekday_evening_start
               - entity: input_datetime.heating_weekend_start
               - entity: input_datetime.heating_period_end
-              - entity: sensor.phone_next_alarm
-                name: Next alarm
+              - entity: sensor.phone1_next_alarm
+                name: Next alarm (phone 1)
+              - entity: sensor.phone2_next_alarm
+                name: Next alarm (phone 2)
           - type: heading
             heading: Boiler health
           - type: entities
