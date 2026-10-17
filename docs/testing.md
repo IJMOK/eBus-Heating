@@ -19,3 +19,13 @@ the date in the last column. Repeat after any firmware or flow change.
 | 11 | Comfort mode | Press the dashboard button | Timer 4 h; target 60; demand on until day set + 1 °C; notification | |
 
 Restore everything after each test (battery back in, add-ons running, `heating_live` back on).
+
+## Bench results (relay not wired)
+
+| Date | Test | Result |
+|---|---|---|
+| 2026-10-17 | Power cut (12 V supply unplugged 10 s) | Relay came back **ON** (`reset_reason` 1) ✅ |
+| 2026-10-17 | Soft restart | Relay kept its state (`reset_reason` 3); a script not set to run on startup stays stopped ✅ (as expected) |
+| 2026-10-17 | Script on real firmware (2.0.1) | Runs, about 1.5 KB memory, mode `ha` during the 15-min grace period ✅ |
+| 2026-10-17 | No heartbeat (HA in dry-run) | After 15 min: mode **`local`**, relay off at 23 °C (> 20.5) ✅ |
+| 2026-10-17 | Mode to HA | Retained MQTT → Node-RED → `input_text.heating_failsafe_mode` = `local`, logbook entry and notifications ✅ |

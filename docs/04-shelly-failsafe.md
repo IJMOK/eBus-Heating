@@ -6,8 +6,8 @@ The Shelly 1 Gen4 does three jobs:
    Assistant stops sending a heartbeat.
 3. **A Bluetooth proxy** for the BLU H&T room sensor, so HA can read it.
 
-> *Status:* configuration tested on the bench. The script's logic is tested in a
-> simulator, loaded on the device disabled, and **not yet run on the device**.
+> *Status:* configuration and the failsafe script tested on the bench (relay not
+> wired): the switch from `ha` to `local` works on firmware 2.0.1. See [testing.md](testing.md).
 
 ## 1. Bench setup
 
