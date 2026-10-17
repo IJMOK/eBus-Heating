@@ -43,6 +43,23 @@ Then:
 - Plug it into its own **5 V USB supply rated at least 2 W (400 mA)**. Don't power
   it from anything inside the boiler.
 
+### Check it from your PC
+
+The stick serves a status JSON (read-only):
+
+```sh
+curl http://<STICK_IP>/api/v1/status
+```
+
+| Field | What to look for |
+|---|---|
+| `build` | Firmware date, should be the newest on the firmware page |
+| `sta.rssi` | Wi-Fi signal: better than about −70 dBm is fine |
+| `ap.on` | `false`, so the open setup network is off |
+| `ebus.signal` | `true` once it's wired to the boiler |
+| `busCount[0]` | Bytes received from the eBUS, should keep rising |
+| `ebus.connected` | `true` once ebusd is connected to it |
+
 ### Reading the LEDs
 
 | LED | Meaning |
@@ -82,6 +99,7 @@ controller on the bus there's less traffic, but the boiler itself still talks.
      - "--scanconfig"
      - "--accesslevel=*"
      - "--pollinterval=30"
+     - "--httpport=8889"                    # read-only JSON: http://<HA_HOST>:8889/data
    ```
 
    - The Mosquitto add-on's host, user and password are picked up automatically.
