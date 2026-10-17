@@ -30,24 +30,57 @@
 
 ## Room-stat terminals 3-4 (the Shelly relay)
 
-On the ecoTEC tested here the low-voltage strip reads, left to right:
-**Burner** (– ⊥, factory wire link) · **24V= RT** (factory wire link) · **BUS – +**,
-with **RT 230V~** and **L N 230V~** further along.
+### Reading the Shelly 1 Gen4 label
 
-- **24V= RT** is the 24 V room-stat loop: closed means heat demand. **Never
-  connect 230 V to it.**
-- **Remove the wire link** from 24V= RT and connect the Shelly's **O** and **I**
-  (dry contacts) in its place. With the link in, the boiler calls for heat
-  non-stop.
-- **Leave the Burner link in.** That input is for an underfloor safety
-  thermostat; opening it stops the burner.
-- **RT 230V~** is a 230 V thermostat input. **Don't use it.**
-- The Shelly is powered at **L/N from the boiler's fused spur**, which is mains
-  wiring: get it done competently, with the spur isolated. Take the 12 V bench
-  supply off first, and never connect both.
-- If an eBUS controller such as tado was fitted, its cable to **BUS** can be
-  reused for the stick. Remember the boiler then has no room control until the
-  relay is in.
+| Terminal | Mains use (this job) | DC use (bench only) |
+|---|---|---|
+| **O**, **I** | Dry relay contact → boiler **24V= RT** | same |
+| **SW** | leave empty | — |
+| **12V** | leave empty | 12 V DC **+** |
+| **L** | Live (230 V) | also **⊥** (−) for 12 V and 24–48 V DC |
+| **N** | Neutral | also **+** for 24–48 V DC |
+
+O and I are a dry contact (16 A/240 V~, 10 A/30 V DC). They switch the boiler's own
+24 V loop and are separate from the Shelly's power. Relay on means O–I closed, which
+means heat demand.
+
+### Wiring
+
+```
+ FUSED SPUR (boiler supply)                SHELLY 1 GEN4  (own enclosure, outside the boiler)
+   load side  L (brown) ───────────────────►  L
+              N (blue)  ───────────────────►  N
+              E (g/y)   ──► earth terminal in the enclosure (no earth on the Shelly)
+                                              12V, SW ── empty
+ BOILER LOW-VOLTAGE STRIP (ecoTEC example)
+   Burner  [ ⊥ ][ – ]  factory link stays in      2-core 0.5–1.0 mm²
+   24V= RT [ • ][ • ]  ◄── factory link out ───── O
+                   ▲───────────────────────────── I     (either way round)
+   BUS     [ – ][ + ]  eBUS stick
+```
+
+### Steps
+
+1. Take the 12 V bench supply off the Shelly. **Never connect 12 V and mains together.**
+2. Turn the boiler off, **isolate it at the fused spur (fuse out)**, and prove it dead.
+3. **Low voltage:** run 2-core 0.5–1.0 mm² through a grommet, away from mains
+   cables. Unplug **24V= RT**, remove the wire link, fit the two cores, refit the
+   plug. Connect them to **O** and **I** at the Shelly. Leave the **Burner** link in.
+   Never use **RT 230V~**.
+4. **Mains** (BS 7671; use an electrician if you aren't competent): 3-core 1.0 mm²
+   from the **load side of the boiler's fused spur** to the Shelly's enclosure.
+   Brown → **L**, blue → **N**, earth to a terminal in the enclosure.
+   Powering it from the spur means the boiler and the relay always lose and regain
+   power together. A separate plug-in supply could fail on its own and leave the
+   relay open, with no heat.
+5. Mount the Shelly **outside the boiler casing** (the metal blocks Wi-Fi and
+   Bluetooth, and it's hot inside), within Bluetooth range of the room sensor.
+6. Refit the covers and restore power. The relay clicks **on** (power-on state);
+   check that eBUS `DCRoomthermostat` reads `on`. Then run [testing.md](testing.md).
+
+If an eBUS controller such as tado was fitted, its cable to **BUS** can be reused
+for the stick. Remember the boiler then has no room control until the relay is in:
+with the link in, it calls for heat non-stop.
 
 ## Afterwards
 
