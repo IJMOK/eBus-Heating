@@ -131,8 +131,50 @@ and return temperature, modulation and burner status. The exact entity IDs depen
 on the boiler and the ebusd config version. Map them once, see
 [PLACEHOLDERS.md](../PLACEHOLDERS.md).
 
-*To be filled in from a real install:* the entity list and the write message for
-the flow setpoint.
+### What a stand-alone ecoTEC reports
+
+Seen on an ecoTEC with no Vaillant controller (scan: `MF=Vaillant; ID=BAI00`,
+ebusd 26.1). Read the data yourself with `curl http://<HA_HOST>:8889/data`, and
+the definitions with `curl "http://<HA_HOST>:8889/data/bai?def&write"`.
+
+| Use | ebusd message (`bai`) | Notes |
+|---|---|---|
+| Actual flow | `FlowTemp` | `temp` and `sensor` fields |
+| Flow setpoint in use | `FlowTempDesired` | Shows the panel setting when nothing else is commanding it |
+| Return | `ReturnTemp` | |
+| Burner | `Flame`, `ModulationDesired` | |
+| Heat demand on terminals 3-4 | `DCRoomthermostat` | `on` = contact closed. Handy to confirm the relay works |
+| Pressure | `WaterPressure` | |
+| Cylinder (system boilers) | `StorageTemp`, `StorageTempDesired` | Present if the boiler runs the cylinder itself |
+| Counters | `HcStarts`, `HcHours`, `HwcStarts`, `PrEnergySumHc1` … | |
+| Faults | `Currenterror`, `Errorhistory` | |
+
+The bus should show `"masters": 2` in `global` (boiler + ebusd) if there is no
+controller.
+
+### The flow-setpoint write: `SetMode` (B5 10 00)
+
+This is the message a Vaillant controller sends to the boiler. In ebusd's
+config it is `bai SetMode` (newer configs call it `SetModeOverride`):
+
+```
+hcmode;flowtempdesired;hwctempdesired;hwcflowtempdesired;ign;disablehc;disablehwctapping;disablehwcload;ign_1;remotecontrolhcpump;releasebackup;releasecooling
+```
+
+- MQTT: publish the value string to `ebusd/bai/SetMode/set`.
+- It carries **hot-water fields as well as heating**. On a system boiler with a
+  cylinder, a wrong `hwctempdesired` or `disablehwcload` changes your hot water
+  too. Work out the hot-water values for your boiler before the first write.
+- The boiler drops back to its own settings if the message isn't repeated, so
+  the control flow re-sends it every few minutes.
+
+### ⚠️ `--accesslevel=*` exposes installer parameters
+
+With `--accesslevel=*`, ebusd will also write installer settings such as
+`FlowsetHcMax`, `PartloadHcKW`, fan-speed offsets and **`SetFactoryValues`**.
+Anything that can publish to the broker can then change them, and depending on
+`mqtt-hassio.cfg` they may show up as controls in HA. If `SetMode` is writable
+without it on your boiler, **leave `--accesslevel` off**.
 
 ## Alternative: micro-ebusd
 
