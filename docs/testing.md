@@ -1,9 +1,21 @@
 # Failsafe tests
 
-> Written in P5, before going live.
+Run these **before** the relay goes live: Shelly fitted on the boiler's 24V= RT
+terminals, script running, HA in live control at Stage 0. Write the result and
+the date in the last column. Repeat after any firmware or flow change.
 
-| Test | Expected | Result |
-|---|---|---|
-| Pull stick power | ebusd watchdog: room-stat mode at panel 60 °C, notification | |
-| Stop Home Assistant | Shelly heartbeat goes stale; local thermostat after 15 min | |
-| Power-cycle the Shelly | Comes back in its configured power-on state (not off), script runs | |
+| # | Test | How | Expected | Result |
+|---|---|---|---|---|
+| 1 | Relay switches the boiler | Toggle the Shelly in HA (heating on at the panel) | Boiler fires / stops; `DCRoomthermostat` follows (on = closed) | |
+| 2 | Power cut | Switch off the boiler's spur 10 s, back on | Shelly comes back with the relay **ON**; script runs; mode `ha` once the heartbeat arrives | |
+| 3 | Soft restart | Shelly → Reboot | Relay keeps its state; script runs; mode `ha` | |
+| 4 | HA/Node-RED stops | Stop the Node-RED add-on | After 15 min mode `local`; relay follows the BLU (on < 19.5, off > 20.5 in periods) | |
+| 5 | HA back | Start Node-RED | Mode `ha` within 1 min; notification "HA is back in control"; HA sets the relay | |
+| 6 | Dry-run hands over | Turn `heating_live` off | Heartbeat stops; after 15 min mode `local` | |
+| 7 | BLU lost too | Take a battery out of the BLU (with Node-RED stopped) | After 30 min mode `timed`; relay follows the fixed schedule | |
+| 8 | eBUS stick unplugged | Pull the stick's USB power | After 10 min notification "eBUS lost"; status `eBUS DOWN`; target 60, no writes; relay keeps room control | |
+| 9 | eBUS back | Plug the stick in | Notification "eBUS is back"; values update | |
+| 10 | Wi-Fi down | Switch the Shelly's AP off at the router (or power the router off) | Mode `local` after 15 min, heating carries on | |
+| 11 | Comfort mode | Press the dashboard button | Timer 4 h; target 60; demand on until day set + 1 °C; notification | |
+
+Restore everything after each test (battery back in, add-ons running, `heating_live` back on).

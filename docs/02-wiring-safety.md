@@ -30,14 +30,24 @@
 
 ## Room-stat terminals 3-4 (the Shelly relay)
 
-*Written when the relay is fitted (P4).*
+On the ecoTEC tested here the low-voltage strip reads, left to right:
+**Burner** (– ⊥, factory wire link) · **24V= RT** (factory wire link) · **BUS – +**,
+with **RT 230V~** and **L N 230V~** further along.
 
-- Terminals **3-4** are a **24 V** low-voltage loop: closed = heat demand. **Never
-  connect 230 V to them.**
-- The Shelly's **dry (potential-free) contacts** go across 3-4, replacing the
-  wire link or old thermostat contacts.
-- The Shelly itself is powered from the boiler's fused spur (110–230 V AC).
-  That part is mains wiring.
+- **24V= RT** is the 24 V room-stat loop: closed means heat demand. **Never
+  connect 230 V to it.**
+- **Remove the wire link** from 24V= RT and connect the Shelly's **O** and **I**
+  (dry contacts) in its place. With the link in, the boiler calls for heat
+  non-stop.
+- **Leave the Burner link in.** That input is for an underfloor safety
+  thermostat; opening it stops the burner.
+- **RT 230V~** is a 230 V thermostat input. **Don't use it.**
+- The Shelly is powered at **L/N from the boiler's fused spur**, which is mains
+  wiring: get it done competently, with the spur isolated. Take the 12 V bench
+  supply off first, and never connect both.
+- If an eBUS controller such as tado was fitted, its cable to **BUS** can be
+  reused for the stick. Remember the boiler then has no room control until the
+  relay is in.
 
 ## Afterwards
 

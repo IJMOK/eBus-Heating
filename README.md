@@ -5,7 +5,9 @@ Replace a cloud thermostat (tado) with **Home Assistant + Node-RED** driving a
 **room-temperature trim**, and a **Shelly relay failsafe** that keeps the house
 warm if Home Assistant, Wi-Fi or the eBUS link goes down.
 
-> ⚠️ **Status: work in progress.** The docs are written as the build happens.
+> ⚠️ **Status: work in progress.** Built and running in dry-run (shadow stage):
+> ebusd reading the boiler, Shelly + BLU configured, Node-RED flows live with no
+> writes. Failsafe script loaded but not yet run; relay not yet wired.
 > Sections marked *untested* have not been run on real hardware yet.
 
 ## How it works

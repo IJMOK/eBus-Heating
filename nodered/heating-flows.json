@@ -24,6 +24,14 @@
     "env": []
   },
   {
+    "id": "bab21c03fa24a392",
+    "type": "tab",
+    "label": "43 Heating - Heartbeat",
+    "disabled": false,
+    "info": "Heartbeat to the Shelly failsafe script (KVS 'hb' over MQTT RPC) while HA is in live control,\nand the Shelly's failsafe mode mirrored into input_text.heating_failsafe_mode.",
+    "env": []
+  },
+  {
     "id": "28d6b6df0bb0cda4",
     "type": "comment",
     "z": "9c1f99c4881dd36f",
@@ -67,7 +75,7 @@
     "type": "function",
     "z": "9c1f99c4881dd36f",
     "name": "Heating config",
-    "func": "// Heating config: the ONLY place with installation-specific IDs.\n// Runs on deploy. Every heating function reads global \"heatingCfg\".\nglobal.set('heatingCfg', {\n    ent: {\n        room: 'sensor.room_temperature',            // master room temperature\n        outdoor: 'sensor.outdoor_temperature',      // outdoor temperature (Met Office)\n        relay: 'switch.heating_relay',          // Shelly relay across boiler terminals 3-4\n        nextAlarm: 'sensor.phone_next_alarm',  // phone \"next alarm\" sensor\n        alarmCal: 'calendar.alarm',    // calendar: an entry = no alarm that day\n    },\n    notifyAll: ['notify.<NOTIFY_SERVICE>'],        // alerts\n    notifyOwner: 'notify.<NOTIFY_SERVICE>',  // promotion approvals\n    flowMax: 60,                     // boiler panel flow setting = hard ceiling\n    hwcTemp: 50,                     // boiler hot-water setting, sent in every SetMode\n    ebusPrefix: 'ebusd/bai',\n    // eBUS writes stay off until the Stage 1 checkpoint has verified the\n    // SetMode payload on this boiler. ebusd itself is also read-only until then.\n    ebusWriteEnabled: false,\n});\nnode.status({ fill: 'green', shape: 'dot', text: 'config loaded' });\nreturn null;\n",
+    "func": "// Heating config: the ONLY place with installation-specific IDs.\n// Runs on deploy. Every heating function reads global \"heatingCfg\".\nglobal.set('heatingCfg', {\n    ent: {\n        room: 'sensor.room_temperature',            // master room temperature\n        outdoor: 'sensor.outdoor_temperature',      // outdoor temperature (Met Office)\n        relay: 'switch.heating_relay',          // Shelly relay across boiler terminals 3-4\n        nextAlarm: 'sensor.phone_next_alarm',  // phone \"next alarm\" sensor\n        alarmCal: 'calendar.alarm',    // calendar: an entry = no alarm that day\n    },\n    shellyTopic: '<SHELLY_MQTT_PREFIX>',  // Shelly MQTT topic prefix (RPC on <prefix>/rpc)\n    notifyAll: ['notify.<NOTIFY_SERVICE>'],        // alerts\n    notifyOwner: 'notify.<NOTIFY_SERVICE>',  // promotion approvals\n    flowMax: 60,                     // boiler panel flow setting = hard ceiling\n    hwcTemp: 50,                     // boiler hot-water setting, sent in every SetMode\n    ebusPrefix: 'ebusd/bai',\n    // eBUS writes stay off until the Stage 1 checkpoint has verified the\n    // SetMode payload on this boiler. ebusd itself is also read-only until then.\n    ebusWriteEnabled: false,\n});\nnode.status({ fill: 'green', shape: 'dot', text: 'config loaded' });\nreturn null;\n",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -220,7 +228,7 @@
     "type": "function",
     "z": "9c1f99c4881dd36f",
     "name": "Control law",
-    "func": "// Heating control loop, every 60 s.\n//   flow  = set + slope*(set - outdoor) + offset + Kp*err + I    (err = set - room)\n//   final = clamp(flow, stage_floor, 60)\n// Outputs: 1 = HA service calls, 2 = eBUS SetMode (MQTT), 3 = comfort event.\n// input_boolean.heating_live off = dry-run: everything is calculated and written to\n// the heating helpers, but the relay is never switched and nothing goes to eBUS.\n\nconst cfg = global.get('heatingCfg');\nconst ha = global.get('homeassistant');\nconst states = ha && ha.homeAssistant && ha.homeAssistant.states;\nif (!cfg || !states) { node.status({ fill: 'red', shape: 'ring', text: 'waiting for HA/config' }); return null; }\n\nconst S = id => (states[id] ? states[id].state : undefined);\nconst N = id => { const v = parseFloat(S(id)); return isFinite(v) ? v : null; };\nconst clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));\nconst r1 = v => Math.round(v * 10) / 10;\nconst r2 = v => Math.round(v * 100) / 100;\nconst tmin = (id, dflt) => { const s = S(id); if (!s || !s.includes(':')) return dflt; const [h, m] = s.split(':').map(Number); return h * 60 + m; };\n\n// Fixed rules (documented in the public guide)\nconst HYST = 0.2;               // relay on below set-0.2, off above set+0.2\nconst ROOM_STALE_MIN = 30;      // room reading older than this = no room sensor\nconst GUARD_BELOW = 1.0;        // comfort guard: this far below set...\nconst GUARD_MIN = 30;           // ...for this many minutes\nconst GUARD_RELEASE = 0.3;      // released when within this of set\nconst RESEND_MS = 4 * 60000;    // re-send SetMode every 4 min\n\nconst now = new Date(), nowMs = now.getTime();\nconst minOfDay = now.getHours() * 60 + now.getMinutes();\nconst weekend = now.getDay() === 0 || now.getDay() === 6;\nconst dkey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;\n\n// --- Helpers ---\nconst live = S('input_boolean.heating_live') === 'on';\nconst stage = parseInt(String(S('input_select.heating_stage') || '0')[0], 10) || 0;\nconst slope = N('input_number.heating_slope'), offset = N('input_number.heating_offset');\nconst kp = N('input_number.heating_kp'), ki = N('input_number.heating_ki');\nconst floorH = N('input_number.heating_stage_floor');\nconst setDay = N('input_number.heating_setpoint_day'), setNight = N('input_number.heating_setpoint_night');\nconst preheat = N('input_number.heating_preheat_minutes'), hold = N('input_number.heating_alarm_hold_minutes');\nconst boostMin = N('input_number.heating_boost_minutes');\nif ([slope, offset, kp, ki, floorH, setDay, setNight, preheat, hold, boostMin].some(v => v === null)) {\n    node.status({ fill: 'red', shape: 'ring', text: 'heating helpers missing' });\n    return null;\n}\nconst eveStart = tmin('input_datetime.heating_weekday_evening_start', 960);\nconst endT = tmin('input_datetime.heating_period_end', 1350);\nconst wkndStart = tmin('input_datetime.heating_weekend_start', 540);\n\nconst st = flow.get('state', 'file') || {};\nif (st.day !== dkey) { st.day = dkey; st.alarmToday = null; st.burnerMin = 0; }\n\n// --- Schedule ---\n// Weekdays with an alarm: (alarm - preheat) to (alarm + hold), then evening to end.\n// Weekends, and weekdays without an alarm: weekend start to end.\nconst na = S(cfg.ent.nextAlarm);\nconst naDate = na && !['unavailable', 'unknown'].includes(na) ? new Date(na) : null;\nconst phoneOk = !!naDate && !isNaN(naDate);\nif (phoneOk && naDate.toDateString() === now.toDateString()) {\n    const am = naDate.getHours() * 60 + naDate.getMinutes();\n    if (am >= 240 && am <= 600) st.alarmToday = am;   // remembered after it has rung\n}\nlet alarmMin = st.alarmToday;\n// Phone sensor unavailable: assume 06:00 unless the alarm calendar has an entry now.\nif (alarmMin == null && !phoneOk && !weekend && S(cfg.ent.alarmCal) !== 'on') alarmMin = 360;\n\nconst periods = (!weekend && alarmMin != null)\n    ? [[alarmMin - preheat, alarmMin + hold], [eveStart, endT]]\n    : [[wkndStart, endT]];\nconst cur = periods.find(([a, b]) => minOfDay >= a && minOfDay < b);\nconst inPeriod = !!cur;\nconst boost = inPeriod && (minOfDay - cur[0]) < boostMin;\nconst comfortMode = S('timer.heating_comfort_mode') === 'active';\nconst set = (inPeriod || comfortMode) ? setDay : setNight;\n\n// --- Inputs ---\nconst room = N(cfg.ent.room);\nconst roomUpd = states[cfg.ent.room] && states[cfg.ent.room].last_updated;\nconst roomAgeMin = roomUpd ? (nowMs - new Date(roomUpd).getTime()) / 60000 : Infinity;\nconst roomOk = room !== null && roomAgeMin <= ROOM_STALE_MIN;\nconst outNow = N(cfg.ent.outdoor);\nif (outNow !== null) st.lastOutdoor = outNow;          // Met Office down: hold the last value\nconst outdoor = st.lastOutdoor != null ? st.lastOutdoor : null;\n\nconst ebus = flow.get('ebus') || {};\nconst ev = n => (ebus[n] && nowMs - ebus[n].ts < 5 * 60000 ? ebus[n].v : null);\nconst dhw = ev('HwcDemand') === 'yes' || ev('HwcImpellorSwitch') === 'yes';\nconst flameV = ev('Flame');\nconst flame = flameV === 'on';\nconst modulation = parseFloat(ev('ModulationDesired'));\nif (flame) st.burnerMin = (st.burnerMin || 0) + 1;\n\n// --- Control law ---\nconst err = roomOk ? set - room : 0;\nconst curve = outdoor !== null ? set + slope * (set - outdoor) + offset : null;\nlet I = st.I || 0;\n// Integral from Stage 1 only, while heating and the curve is in charge (anti-windup).\nif (stage >= 1 && roomOk && st.demand && !dhw && !boost && !comfortMode && !(st.guard && st.guard.forced)) {\n    I = clamp(I + ki * err, -5, 5);\n}\nif (stage === 0) I = 0;\nst.I = I;\nconst flowRaw = curve !== null ? curve + kp * err + I : null;\nconst floor = stage === 0 ? cfg.flowMax : floorH;\nconst curveTarget = flowRaw !== null ? clamp(flowRaw, floor, cfg.flowMax) : null;\n\n// --- Comfort guard (Stage 1+, only when the curve is limiting the flow) ---\nst.guard = st.guard || { forced: false, belowSince: null };\nlet comfortEvent = null;\nif (stage >= 1 && inPeriod && roomOk && !boost) {\n    if (st.guard.forced) {\n        if (room >= set - GUARD_RELEASE) st.guard = { forced: false, belowSince: null };\n    } else if (room < set - GUARD_BELOW && !dhw && curveTarget !== null && curveTarget < cfg.flowMax - 0.5) {\n        if (!st.guard.belowSince) st.guard.belowSince = nowMs;\n        if (nowMs - st.guard.belowSince >= GUARD_MIN * 60000) {\n            st.guard.forced = true;\n            comfortEvent = { payload: { room: r1(room), set, stage, curveTarget: r1(curveTarget), at: now.toISOString() } };\n        }\n    } else {\n        st.guard.belowSince = null;\n    }\n} else if (!inPeriod) {\n    st.guard = { forced: false, belowSince: null };\n}\n\n// --- Final flow target ---\nlet target, why;\nif (stage === 0) { target = cfg.flowMax; why = 'stage 0: panel ' + cfg.flowMax; }\nelse if (comfortMode) { target = cfg.flowMax; why = 'comfort mode'; }\nelse if (st.guard.forced) { target = cfg.flowMax; why = 'comfort guard'; }\nelse if (boost) { target = cfg.flowMax; why = 'warm-up boost'; }\nelse if (curveTarget === null) { target = st.lastTarget != null ? st.lastTarget : cfg.flowMax; why = 'no outdoor temp: holding'; }\nelse { target = curveTarget; why = 'curve'; }\ntarget = r1(clamp(target, 20, cfg.flowMax));\nst.lastTarget = target;\n\n// --- Heat demand (relay), hysteresis on room temperature ---\nlet demand = !!st.demand;\nif (!roomOk) demand = inPeriod || comfortMode; // no room sensor: behave like a timer\nelse if (comfortMode) demand = room < setDay + 1.0;   // \"heat now\", up to 1 °C above day set\nelse if (room < set - HYST) demand = true;\nelse if (room > set + HYST) demand = false;\nst.demand = demand;\n\n// --- Day statistics for the nightly review (global, file store) ---\nconst ds = global.get('heatingDay', 'file') || {};\nds.minutes = (ds.minutes || 0) + 1;\nif (outdoor !== null) { ds.outSum = (ds.outSum || 0) + outdoor; ds.outN = (ds.outN || 0) + 1; }\nif (demand) ds.demandMin = (ds.demandMin || 0) + 1;\nif (flame) ds.burnerMin = (ds.burnerMin || 0) + 1;\nif (inPeriod && !boost && roomOk && !dhw) {\n    ds.occMin = (ds.occMin || 0) + 1;\n    if (Math.abs(room - set) <= 0.5) ds.okMin = (ds.okMin || 0) + 1;\n    if (room < set - 0.5) ds.shortMin = (ds.shortMin || 0) + 1;\n}\nif (comfortEvent) ds.comfortEvents = (ds.comfortEvents || 0) + 1;\nglobal.set('heatingDay', ds, 'file');\n\n// --- Outputs ---\nconst out = [];\nconst call = (action, entity_id, data) => out.push({ payload: { action, target: { entity_id }, data: data || {} } });\nconst setNum = (id, v, minDelta) => {\n    if (v === null || !isFinite(v)) return;\n    const c = N(id);\n    if (c === null || Math.abs(c - v) >= minDelta) call('input_number.set_value', id, { value: v });\n};\nconst setBool = (id, on) => { if (S(id) !== (on ? 'on' : 'off')) call(`input_boolean.turn_${on ? 'on' : 'off'}`, id); };\n\nsetNum('input_number.heating_flow_target', target, 0.1);\nsetNum('input_number.heating_flow_curve', flowRaw === null ? null : r1(clamp(flowRaw, 0, 100)), 0.1);\nsetNum('input_number.heating_integral', r2(I), 0.01);\nsetNum('input_number.heating_setpoint', set, 0.05);\nsetNum('input_number.heating_boiler_modulation', isFinite(modulation) ? modulation : null, 0.5);\nsetNum('input_number.heating_burner_minutes_today', st.burnerMin || 0, 1);\nsetBool('input_boolean.heating_demand', demand);\nsetBool('input_boolean.heating_period', inPeriod);\nif (flameV !== null) setBool('input_boolean.heating_flame', flame);\n\nconst status = [\n    `S${stage}`, live ? 'LIVE' : 'dry-run',\n    inPeriod ? (boost ? 'period (boost)' : 'period') : 'setback',\n    `set ${set}`, `room ${roomOk ? r1(room) : '?'}`, `out ${outdoor !== null ? r1(outdoor) : '?'}`,\n    `curve ${flowRaw !== null ? r1(flowRaw) : '?'}`, `target ${target} (${why})`,\n    `demand ${demand ? 'ON' : 'off'}`, dhw ? 'DHW' : '',\n].filter(Boolean).join(' | ');\nif (S('input_text.heating_status') !== status.slice(0, 255)) call('input_text.set_value', 'input_text.heating_status', { value: status.slice(0, 255) });\n\n// Relay: only when live\nif (live) {\n    const want = demand ? 'on' : 'off';\n    if (S(cfg.ent.relay) !== want) call(`switch.turn_${want}`, cfg.ent.relay);\n}\n\n// eBUS SetMode: only when live, Stage 1+, and enabled in config after verification.\n// Fields: hcmode;flowtempdesired;hwctempdesired;hwcflowtempdesired;disablehc;\n//         disablehwctapping;disablehwcload;remotecontrolhcpump;releasebackup;releasecooling\n// (ign fields omitted). Hot water: boiler setting, both disable bits 0.\nlet ebusMsg = null;\nif (live && stage >= 1 && cfg.ebusWriteEnabled) {\n    if (st.lastSent !== target || nowMs - (st.lastSentMs || 0) >= RESEND_MS) {\n        ebusMsg = { topic: `${cfg.ebusPrefix}/SetMode/set`, payload: `auto;${target};${cfg.hwcTemp};-;0;0;0;0;0;0` };\n        st.lastSent = target; st.lastSentMs = nowMs;\n    }\n}\n\nflow.set('state', st, 'file');\nnode.status({ fill: live ? 'green' : 'yellow', shape: demand ? 'dot' : 'ring', text: status.slice(0, 80) });\nreturn [out, ebusMsg, comfortEvent];\n",
+    "func": "// Heating control loop, every 60 s.\n//   flow  = set + slope*(set - outdoor) + offset + Kp*err + I    (err = set - room)\n//   final = clamp(flow, stage_floor, 60)\n// Outputs: 1 = HA service calls, 2 = eBUS SetMode (MQTT), 3 = comfort event.\n// input_boolean.heating_live off = dry-run: everything is calculated and written to\n// the heating helpers, but the relay is never switched and nothing goes to eBUS.\n\nconst cfg = global.get('heatingCfg');\nconst ha = global.get('homeassistant');\nconst states = ha && ha.homeAssistant && ha.homeAssistant.states;\nif (!cfg || !states) { node.status({ fill: 'red', shape: 'ring', text: 'waiting for HA/config' }); return null; }\n\nconst S = id => (states[id] ? states[id].state : undefined);\nconst N = id => { const v = parseFloat(S(id)); return isFinite(v) ? v : null; };\nconst clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));\nconst r1 = v => Math.round(v * 10) / 10;\nconst r2 = v => Math.round(v * 100) / 100;\nconst tmin = (id, dflt) => { const s = S(id); if (!s || !s.includes(':')) return dflt; const [h, m] = s.split(':').map(Number); return h * 60 + m; };\n\n// Fixed rules (documented in the public guide)\nconst HYST = 0.2;               // relay on below set-0.2, off above set+0.2\nconst ROOM_STALE_MIN = 30;      // room reading older than this = no room sensor\nconst GUARD_BELOW = 1.0;        // comfort guard: this far below set...\nconst GUARD_MIN = 30;           // ...for this many minutes\nconst GUARD_RELEASE = 0.3;      // released when within this of set\nconst RESEND_MS = 4 * 60000;    // re-send SetMode every 4 min\n\nconst now = new Date(), nowMs = now.getTime();\nconst minOfDay = now.getHours() * 60 + now.getMinutes();\nconst weekend = now.getDay() === 0 || now.getDay() === 6;\nconst dkey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;\n\n// --- Helpers ---\nconst live = S('input_boolean.heating_live') === 'on';\nconst stage = parseInt(String(S('input_select.heating_stage') || '0')[0], 10) || 0;\nconst slope = N('input_number.heating_slope'), offset = N('input_number.heating_offset');\nconst kp = N('input_number.heating_kp'), ki = N('input_number.heating_ki');\nconst floorH = N('input_number.heating_stage_floor');\nconst setDay = N('input_number.heating_setpoint_day'), setNight = N('input_number.heating_setpoint_night');\nconst preheat = N('input_number.heating_preheat_minutes'), hold = N('input_number.heating_alarm_hold_minutes');\nconst boostMin = N('input_number.heating_boost_minutes');\nif ([slope, offset, kp, ki, floorH, setDay, setNight, preheat, hold, boostMin].some(v => v === null)) {\n    node.status({ fill: 'red', shape: 'ring', text: 'heating helpers missing' });\n    return null;\n}\nconst eveStart = tmin('input_datetime.heating_weekday_evening_start', 960);\nconst endT = tmin('input_datetime.heating_period_end', 1350);\nconst wkndStart = tmin('input_datetime.heating_weekend_start', 540);\n\nconst st = flow.get('state', 'file') || {};\nif (st.day !== dkey) { st.day = dkey; st.alarmToday = null; st.burnerMin = 0; }\n\n// --- Schedule ---\n// Weekdays with an alarm: (alarm - preheat) to (alarm + hold), then evening to end.\n// Weekends, and weekdays without an alarm: weekend start to end.\nconst na = S(cfg.ent.nextAlarm);\nconst naDate = na && !['unavailable', 'unknown'].includes(na) ? new Date(na) : null;\nconst phoneOk = !!naDate && !isNaN(naDate);\nif (phoneOk && naDate.toDateString() === now.toDateString()) {\n    const am = naDate.getHours() * 60 + naDate.getMinutes();\n    if (am >= 240 && am <= 600) st.alarmToday = am;   // remembered after it has rung\n}\nlet alarmMin = st.alarmToday;\n// Phone sensor unavailable: assume 06:00 unless the alarm calendar has an entry now.\nif (alarmMin == null && !phoneOk && !weekend && S(cfg.ent.alarmCal) !== 'on') alarmMin = 360;\n\nconst periods = (!weekend && alarmMin != null)\n    ? [[alarmMin - preheat, alarmMin + hold], [eveStart, endT]]\n    : [[wkndStart, endT]];\nconst cur = periods.find(([a, b]) => minOfDay >= a && minOfDay < b);\nconst inPeriod = !!cur;\nconst boost = inPeriod && (minOfDay - cur[0]) < boostMin;\nconst comfortMode = S('timer.heating_comfort_mode') === 'active';\nconst set = (inPeriod || comfortMode) ? setDay : setNight;\n\n// --- Inputs ---\nconst room = N(cfg.ent.room);\nconst roomUpd = states[cfg.ent.room] && states[cfg.ent.room].last_updated;\nconst roomAgeMin = roomUpd ? (nowMs - new Date(roomUpd).getTime()) / 60000 : Infinity;\nconst roomOk = room !== null && roomAgeMin <= ROOM_STALE_MIN;\nconst outNow = N(cfg.ent.outdoor);\nif (outNow !== null) st.lastOutdoor = outNow;          // Met Office down: hold the last value\nconst outdoor = st.lastOutdoor != null ? st.lastOutdoor : null;\n\nconst ebus = flow.get('ebus') || {};\nconst ev = n => (ebus[n] && nowMs - ebus[n].ts < 5 * 60000 ? ebus[n].v : null);\nconst dhw = ev('HwcDemand') === 'yes' || ev('HwcImpellorSwitch') === 'yes';\nconst ebusOk = flow.get('ebusOk') !== false;          // set by the eBUS watchdog\nconst flameV = ev('Flame');\nconst flame = flameV === 'on';\nconst modulation = parseFloat(ev('ModulationDesired'));\nif (flame) st.burnerMin = (st.burnerMin || 0) + 1;\n\n// --- Control law ---\nconst err = roomOk ? set - room : 0;\nconst curve = outdoor !== null ? set + slope * (set - outdoor) + offset : null;\nlet I = st.I || 0;\n// Integral from Stage 1 only, while heating and the curve is in charge (anti-windup).\nif (stage >= 1 && roomOk && st.demand && !dhw && !boost && !comfortMode && !(st.guard && st.guard.forced)) {\n    I = clamp(I + ki * err, -5, 5);\n}\nif (stage === 0) I = 0;\nst.I = I;\nconst flowRaw = curve !== null ? curve + kp * err + I : null;\nconst floor = stage === 0 ? cfg.flowMax : floorH;\nconst curveTarget = flowRaw !== null ? clamp(flowRaw, floor, cfg.flowMax) : null;\n\n// --- Comfort guard (Stage 1+, only when the curve is limiting the flow) ---\nst.guard = st.guard || { forced: false, belowSince: null };\nlet comfortEvent = null;\nif (stage >= 1 && inPeriod && roomOk && !boost) {\n    if (st.guard.forced) {\n        if (room >= set - GUARD_RELEASE) st.guard = { forced: false, belowSince: null };\n    } else if (room < set - GUARD_BELOW && !dhw && curveTarget !== null && curveTarget < cfg.flowMax - 0.5) {\n        if (!st.guard.belowSince) st.guard.belowSince = nowMs;\n        if (nowMs - st.guard.belowSince >= GUARD_MIN * 60000) {\n            st.guard.forced = true;\n            comfortEvent = { payload: { room: r1(room), set, stage, curveTarget: r1(curveTarget), at: now.toISOString() } };\n        }\n    } else {\n        st.guard.belowSince = null;\n    }\n} else if (!inPeriod) {\n    st.guard = { forced: false, belowSince: null };\n}\n\n// --- Final flow target ---\nlet target, why;\nif (stage === 0) { target = cfg.flowMax; why = 'stage 0: panel ' + cfg.flowMax; }\nelse if (!ebusOk) { target = cfg.flowMax; why = 'eBUS down: panel ' + cfg.flowMax; }\nelse if (comfortMode) { target = cfg.flowMax; why = 'comfort mode'; }\nelse if (st.guard.forced) { target = cfg.flowMax; why = 'comfort guard'; }\nelse if (boost) { target = cfg.flowMax; why = 'warm-up boost'; }\nelse if (curveTarget === null) { target = st.lastTarget != null ? st.lastTarget : cfg.flowMax; why = 'no outdoor temp: holding'; }\nelse { target = curveTarget; why = 'curve'; }\ntarget = r1(clamp(target, 20, cfg.flowMax));\nst.lastTarget = target;\n\n// --- Heat demand (relay), hysteresis on room temperature ---\nlet demand = !!st.demand;\nif (!roomOk) demand = inPeriod || comfortMode; // no room sensor: behave like a timer\nelse if (comfortMode) demand = room < setDay + 1.0;   // \"heat now\", up to 1 °C above day set\nelse if (room < set - HYST) demand = true;\nelse if (room > set + HYST) demand = false;\nst.demand = demand;\n\n// --- Day statistics for the nightly review (global, file store) ---\nconst ds = global.get('heatingDay', 'file') || {};\nds.minutes = (ds.minutes || 0) + 1;\nif (outdoor !== null) { ds.outSum = (ds.outSum || 0) + outdoor; ds.outN = (ds.outN || 0) + 1; }\nif (demand) ds.demandMin = (ds.demandMin || 0) + 1;\nif (flame) ds.burnerMin = (ds.burnerMin || 0) + 1;\nif (inPeriod && !boost && roomOk && !dhw) {\n    ds.occMin = (ds.occMin || 0) + 1;\n    if (Math.abs(room - set) <= 0.5) ds.okMin = (ds.okMin || 0) + 1;\n    if (room < set - 0.5) ds.shortMin = (ds.shortMin || 0) + 1;\n}\nif (comfortEvent) ds.comfortEvents = (ds.comfortEvents || 0) + 1;\nglobal.set('heatingDay', ds, 'file');\n\n// --- Outputs ---\nconst out = [];\nconst call = (action, entity_id, data) => out.push({ payload: { action, target: { entity_id }, data: data || {} } });\nconst setNum = (id, v, minDelta) => {\n    if (v === null || !isFinite(v)) return;\n    const c = N(id);\n    if (c === null || Math.abs(c - v) >= minDelta) call('input_number.set_value', id, { value: v });\n};\nconst setBool = (id, on) => { if (S(id) !== (on ? 'on' : 'off')) call(`input_boolean.turn_${on ? 'on' : 'off'}`, id); };\n\nsetNum('input_number.heating_flow_target', target, 0.1);\nsetNum('input_number.heating_flow_curve', flowRaw === null ? null : r1(clamp(flowRaw, 0, 100)), 0.1);\nsetNum('input_number.heating_integral', r2(I), 0.01);\nsetNum('input_number.heating_setpoint', set, 0.05);\nsetNum('input_number.heating_boiler_modulation', isFinite(modulation) ? modulation : null, 0.5);\nsetNum('input_number.heating_burner_minutes_today', st.burnerMin || 0, 1);\nsetBool('input_boolean.heating_demand', demand);\nsetBool('input_boolean.heating_period', inPeriod);\nif (flameV !== null) setBool('input_boolean.heating_flame', flame);\n\nconst status = [\n    `S${stage}`, live ? 'LIVE' : 'dry-run',\n    inPeriod ? (boost ? 'period (boost)' : 'period') : 'setback',\n    `set ${set}`, `room ${roomOk ? r1(room) : '?'}`, `out ${outdoor !== null ? r1(outdoor) : '?'}`,\n    `curve ${flowRaw !== null ? r1(flowRaw) : '?'}`, `target ${target} (${why})`,\n    `demand ${demand ? 'ON' : 'off'}`, dhw ? 'DHW' : '', ebusOk ? '' : 'eBUS DOWN',\n].filter(Boolean).join(' | ');\nif (S('input_text.heating_status') !== status.slice(0, 255)) call('input_text.set_value', 'input_text.heating_status', { value: status.slice(0, 255) });\n\n// Relay: only when live\nif (live) {\n    const want = demand ? 'on' : 'off';\n    if (S(cfg.ent.relay) !== want) call(`switch.turn_${want}`, cfg.ent.relay);\n}\n\n// eBUS SetMode: only when live, Stage 1+, and enabled in config after verification.\n// Fields: hcmode;flowtempdesired;hwctempdesired;hwcflowtempdesired;disablehc;\n//         disablehwctapping;disablehwcload;remotecontrolhcpump;releasebackup;releasecooling\n// (ign fields omitted). Hot water: boiler setting, both disable bits 0.\nlet ebusMsg = null;\nif (live && stage >= 1 && ebusOk && cfg.ebusWriteEnabled) {\n    if (st.lastSent !== target || nowMs - (st.lastSentMs || 0) >= RESEND_MS) {\n        ebusMsg = { topic: `${cfg.ebusPrefix}/SetMode/set`, payload: `auto;${target};${cfg.hwcTemp};-;0;0;0;0;0;0` };\n        st.lastSent = target; st.lastSentMs = nowMs;\n    }\n}\n\nflow.set('state', st, 'file');\nglobal.set('heatingCtl', { ts: nowMs, live });         // the heartbeat checks this\nnode.status({ fill: live ? 'green' : 'yellow', shape: demand ? 'dot' : 'ring', text: status.slice(0, 80) });\nreturn [out, ebusMsg, comfortEvent];\n",
     "outputs": 3,
     "timeout": 0,
     "noerr": 0,
@@ -300,6 +308,221 @@
     "x": 545,
     "y": 360,
     "wires": []
+  },
+  {
+    "id": "ce796cfd8e5e3527",
+    "type": "inject",
+    "z": "9c1f99c4881dd36f",
+    "name": "Every 60 s",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 90,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 420,
+    "wires": [
+      [
+        "cfe9153c0f22802c"
+      ]
+    ]
+  },
+  {
+    "id": "cfe9153c0f22802c",
+    "type": "function",
+    "z": "9c1f99c4881dd36f",
+    "name": "eBUS watchdog",
+    "func": "// ebusd watchdog (every 60 s). eBUS is \"down\" when no FlowTemp has arrived for\n// 10 min or ebusd reports no bus signal. While down, the control loop uses the\n// panel's 60 °C and sends nothing over eBUS, so the boiler is in plain room-stat mode.\nconst cfg = global.get('heatingCfg');\nconst ha = global.get('homeassistant');\nconst states = ha && ha.homeAssistant && ha.homeAssistant.states;\nif (!cfg || !states) return null;\nconst ebus = flow.get('ebus') || {};\nconst fresh = ebus.FlowTemp && Date.now() - ebus.FlowTemp.ts < 10 * 60000;\nconst sig = states['binary_sensor.heating_ebusd_global_signal'];\nconst ok = !!fresh && !(sig && sig.state === 'off');\nconst was = flow.get('ebusOk');\nflow.set('ebusOk', ok);\nnode.status({ fill: ok ? 'green' : 'red', shape: 'dot', text: ok ? 'eBUS ok' : 'eBUS DOWN' });\nif (was === undefined || was === ok) return null;            // only on a change\nconst text = ok ? 'eBUS is back. Weather control resumes.'\n    : 'eBUS lost (no boiler data for 10 min). The boiler runs at its panel 60 °C; the relay keeps room control.';\nconst out = [];\nfor (const n of cfg.notifyAll) out.push({ payload: { action: n, target: {}, data: { title: 'Heating', message: text } } });\nout.push({ payload: { action: 'logbook.log', target: {}, data: { name: 'Heating', message: text, entity_id: 'input_select.heating_stage' } } });\nreturn [out];\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 420,
+    "wires": [
+      [
+        "a64b0b429056f682"
+      ]
+    ]
+  },
+  {
+    "id": "a64b0b429056f682",
+    "type": "api-call-service",
+    "z": "9c1f99c4881dd36f",
+    "name": "Call HA service",
+    "server": "7299b18e.99ef9",
+    "version": 7,
+    "debugenabled": false,
+    "action": "",
+    "floorId": [],
+    "areaId": [],
+    "deviceId": [],
+    "entityId": [],
+    "labelId": [],
+    "data": "",
+    "dataType": "jsonata",
+    "mergeContext": "",
+    "mustacheAltTags": false,
+    "outputProperties": [],
+    "queue": "none",
+    "blockInputOverrides": false,
+    "domain": "",
+    "service": "",
+    "x": 570,
+    "y": 420,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "2ef8b0f45ffc4f9f",
+    "type": "inject",
+    "z": "bab21c03fa24a392",
+    "name": "Every 60 s",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 30,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 80,
+    "wires": [
+      [
+        "cbd3d66873f021f1"
+      ]
+    ]
+  },
+  {
+    "id": "cbd3d66873f021f1",
+    "type": "function",
+    "z": "bab21c03fa24a392",
+    "name": "Heartbeat (KVS over MQTT RPC)",
+    "func": "// Heartbeat to the Shelly failsafe (every 60 s): KVS.Set \"hb\" over MQTT RPC.\n// Sent only while HA is in live control and the control loop ran in the last 3 min,\n// so a stuck Node-RED or dry-run hands the relay to the Shelly's own thermostat.\nconst cfg = global.get('heatingCfg');\nconst ctl = global.get('heatingCtl');\nif (!cfg || !ctl || !ctl.live || Date.now() - ctl.ts > 3 * 60000) {\n    node.status({ fill: 'yellow', shape: 'ring', text: ctl && !ctl.live ? 'not sent: dry-run' : 'not sent: control loop stale' });\n    return null;\n}\nconst now = Math.floor(Date.now() / 1000);\nnode.status({ fill: 'green', shape: 'dot', text: `sent ${new Date().toLocaleTimeString()}` });\nreturn {\n    topic: `${cfg.shellyTopic}/rpc`,\n    payload: JSON.stringify({ id: now, src: 'nodered-heating', method: 'KVS.Set', params: { key: 'hb', value: now } }),\n};\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 80,
+    "wires": [
+      [
+        "1e64139c5e37a541"
+      ]
+    ]
+  },
+  {
+    "id": "1e64139c5e37a541",
+    "type": "mqtt out",
+    "z": "bab21c03fa24a392",
+    "name": "Shelly RPC",
+    "topic": "",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "a52e9715ea4dbd4f",
+    "x": 620,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "d6fa01653b23b92b",
+    "type": "mqtt in",
+    "z": "bab21c03fa24a392",
+    "name": "Shelly failsafe mode",
+    "topic": "heating/failsafe/mode",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "a52e9715ea4dbd4f",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 160,
+    "wires": [
+      [
+        "5c0861eae515022d"
+      ]
+    ]
+  },
+  {
+    "id": "5c0861eae515022d",
+    "type": "function",
+    "z": "bab21c03fa24a392",
+    "name": "Failsafe mode → HA",
+    "func": "// Mirror the Shelly failsafe mode (retained MQTT) into HA; notify on changes.\nconst cfg = global.get('heatingCfg');\nconst mode = String(msg.payload);\nconst prev = flow.get('fsMode');\nflow.set('fsMode', mode);\nconst out = [{ payload: { action: 'input_text.set_value', target: { entity_id: 'input_text.heating_failsafe_mode' }, data: { value: mode } } }];\nif (prev !== undefined && prev !== mode && cfg) {\n    const text = mode === 'ha' ? 'Shelly failsafe: HA is back in control.'\n        : `Shelly failsafe active (${mode}): the Shelly is running the heating on its own.`;\n    for (const n of cfg.notifyAll) out.push({ payload: { action: n, target: {}, data: { title: 'Heating', message: text } } });\n    out.push({ payload: { action: 'logbook.log', target: {}, data: { name: 'Heating', message: text, entity_id: 'input_text.heating_failsafe_mode' } } });\n}\nnode.status({ fill: mode === 'ha' ? 'green' : 'red', shape: 'dot', text: mode });\nreturn [out];\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 160,
+    "wires": [
+      [
+        "4115ae74b5f82c0f"
+      ]
+    ]
+  },
+  {
+    "id": "4115ae74b5f82c0f",
+    "type": "api-call-service",
+    "z": "bab21c03fa24a392",
+    "name": "Call HA service",
+    "server": "7299b18e.99ef9",
+    "version": 7,
+    "debugenabled": false,
+    "action": "",
+    "floorId": [],
+    "areaId": [],
+    "deviceId": [],
+    "entityId": [],
+    "labelId": [],
+    "data": "",
+    "dataType": "jsonata",
+    "mergeContext": "",
+    "mustacheAltTags": false,
+    "outputProperties": [],
+    "queue": "none",
+    "blockInputOverrides": false,
+    "domain": "",
+    "service": "",
+    "x": 620,
+    "y": 160,
+    "wires": [
+      []
+    ]
   },
   {
     "id": "a17997a113c75d56",
