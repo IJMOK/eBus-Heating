@@ -92,7 +92,7 @@
     "id": "2378233f7c4dcb40",
     "type": "inject",
     "z": "9c1f99c4881dd36f",
-    "name": "Every 60 s",
+    "name": "Every 60 s (eBUS poll)",
     "props": [
       {
         "p": "payload"
@@ -198,7 +198,7 @@
     "id": "72626a2e7bc238b1",
     "type": "inject",
     "z": "9c1f99c4881dd36f",
-    "name": "Every 60 s",
+    "name": "Every 60 s (control)",
     "props": [
       {
         "p": "payload"
@@ -253,7 +253,7 @@
     "id": "8e3d9932a3187d37",
     "type": "api-call-service",
     "z": "9c1f99c4881dd36f",
-    "name": "Call HA service",
+    "name": "HA calls (control)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
@@ -313,7 +313,7 @@
     "id": "ce796cfd8e5e3527",
     "type": "inject",
     "z": "9c1f99c4881dd36f",
-    "name": "Every 60 s",
+    "name": "Every 60 s (watchdog)",
     "props": [
       {
         "p": "payload"
@@ -362,7 +362,7 @@
     "id": "a64b0b429056f682",
     "type": "api-call-service",
     "z": "9c1f99c4881dd36f",
-    "name": "Call HA service",
+    "name": "HA calls (watchdog)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
@@ -391,7 +391,7 @@
     "id": "2ef8b0f45ffc4f9f",
     "type": "inject",
     "z": "bab21c03fa24a392",
-    "name": "Every 60 s",
+    "name": "Every 60 s (heartbeat)",
     "props": [
       {
         "p": "payload"
@@ -499,7 +499,7 @@
     "id": "4115ae74b5f82c0f",
     "type": "api-call-service",
     "z": "bab21c03fa24a392",
-    "name": "Call HA service",
+    "name": "HA calls (failsafe mode)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
@@ -564,7 +564,7 @@
     "id": "09e63d8d64039b85",
     "type": "api-call-service",
     "z": "4c5c0a357704daf2",
-    "name": "Call HA service",
+    "name": "HA calls (comfort event)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
@@ -664,7 +664,7 @@
     "id": "b5d56664287162d6",
     "type": "api-call-service",
     "z": "4c5c0a357704daf2",
-    "name": "Call HA service",
+    "name": "HA calls (comfort mode)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
@@ -742,7 +742,7 @@
     "id": "558c64ed0747f4d1",
     "type": "api-call-service",
     "z": "3ad3b2aca7d1cfa7",
-    "name": "Call HA service",
+    "name": "HA calls (nightly)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
@@ -875,7 +875,7 @@
     "id": "e2d3afe331cc16fb",
     "type": "api-call-service",
     "z": "3ad3b2aca7d1cfa7",
-    "name": "Call HA service",
+    "name": "HA calls (approve)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
@@ -953,7 +953,7 @@
     "id": "d1593443d9aa6a43",
     "type": "api-call-service",
     "z": "3ad3b2aca7d1cfa7",
-    "name": "Call HA service",
+    "name": "HA calls (starting values)",
     "server": "7299b18e.99ef9",
     "version": 7,
     "debugenabled": false,
