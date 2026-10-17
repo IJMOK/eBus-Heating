@@ -145,7 +145,7 @@ the definitions with `curl "http://<HA_HOST>:8889/data/bai?def&write"`.
 | Burner | `Flame`, `ModulationDesired` | |
 | Heat demand on terminals 3-4 | `DCRoomthermostat` | `on` = contact closed. Handy to confirm the relay works |
 | Pressure | `WaterPressure` | |
-| Cylinder (system boilers) | `StorageTemp`, `StorageTempDesired` | Present if the boiler runs the cylinder itself |
+| Hot water | `StorageTemp`, `StorageTempDesired`, `HwcImpellorSwitch` | ebusd uses the same names for every ecoTEC. On a **combi** "Storage" is the hot-water outlet sensor and setpoint, not a tank; `HwcImpellorSwitch` is the tap-flow sensor |
 | Counters | `HcStarts`, `HcHours`, `HwcStarts`, `PrEnergySumHc1` … | |
 | Faults | `Currenterror`, `Errorhistory` | |
 
@@ -162,9 +162,10 @@ hcmode;flowtempdesired;hwctempdesired;hwcflowtempdesired;ign;disablehc;disablehw
 ```
 
 - MQTT: publish the value string to `ebusd/bai/SetMode/set`.
-- It carries **hot-water fields as well as heating**. On a system boiler with a
-  cylinder, a wrong `hwctempdesired` or `disablehwcload` changes your hot water
-  too. Work out the hot-water values for your boiler before the first write.
+- It carries **hot-water fields as well as heating**. On a combi,
+  `disablehwctapping` = 1 means **no hot water at the taps**, and
+  `hwctempdesired` overrides the panel's hot-water setting. Send the hot-water
+  setpoint your panel already uses, with both disable bits at 0.
 - The boiler drops back to its own settings if the message isn't repeated, so
   the control flow re-sends it every few minutes.
 
