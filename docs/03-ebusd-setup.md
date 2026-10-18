@@ -110,8 +110,8 @@ controller on the bus there's less traffic, but the boiler itself still talks.
      Don't set `--mqtthost` unless you're using an external broker.
    - No `--accesslevel` yet: without it ebusd can't write to the boiler at all.
      See the access-level section below for when to add it (with pinned definitions).
-   - *Untested:* check the option names against the add-on's Configuration tab,
-     because the schema has changed between versions.
+   - Checked on add-on 26.1.8. The schema has changed between versions, so compare
+     the option names with the add-on's Configuration tab.
 3. Start it and watch the log. You want to see:
    - `started with auto scan on enhanced device`
    - `device status: reset, supports info`

@@ -1,6 +1,6 @@
 # Example Node-RED flows
 
-`heating-flows.json` holds three tabs. Import it with Menu → Import, then:
+`heating-flows.json` holds four tabs. Import it with Menu → Import, then:
 
 1. Open **Heating config** on tab 40 and set your entity IDs and notify services
    (see [../PLACEHOLDERS.md](../PLACEHOLDERS.md)).
@@ -23,8 +23,11 @@
 | `40 Heating - Control` | Every 60 s: schedule, weather curve + PI, stage clamp, relay, eBUS SetMode (off until enabled), plus ebusd read requests |
 | `41 Heating - Comfort` | Comfort events (notify, mark the day, demote one stage) and the Comfort-mode button |
 | `42 Heating - Nightly` | 03:00 review: day stats, learning per stage, promotion check with approval. Starting-values button |
+| `43 Heating - Heartbeat` | Every 60 s while live: heartbeat to the Shelly failsafe (KVS over MQTT RPC), plus the heating season (`fs_season`). Mirrors the Shelly's failsafe mode into HA |
 
-Heartbeat to the Shelly and the ebusd watchdog follow once the relay is fitted.
+Tab 40 also runs the ebusd watchdog (no bus signal, or no flow temperature for
+10 min = eBUS down). The control law writes a one-line status, and the next heating
+block, to `input_text.heating_status` / `heating_next`.
 
 **Dry-run:** `input_boolean.heating_live` off means everything is calculated and
 written to the heating helpers, but the relay is never switched and nothing is sent

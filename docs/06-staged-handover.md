@@ -50,6 +50,11 @@ The comfort guard keeps the flow at 60 °C until the room recovers.
 ## Manual control
 
 - **Comfort mode** button: 60 °C for 4 hours.
+- **Heating season** off (summer): no heat demand at all except comfort mode, and
+  the Shelly failsafe keeps the relay off too.
+- **Before the first Stage 1 write**, check one `SetMode` by hand on your boiler
+  (flow setpoint taken, hot water unchanged), then set `ebusWriteEnabled: true` in
+  the Heating config node.
 - You can set `heating_stage`, the floor and the tunables by hand at any time.
 - **Set starting values** (Node-RED tab 42) resets everything to Stage 0 with the
   starting tunables.

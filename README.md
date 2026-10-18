@@ -5,10 +5,13 @@ Replace a cloud thermostat (tado) with **Home Assistant + Node-RED** driving a
 **room-temperature trim**, and a **Shelly relay failsafe** that keeps the house
 warm if Home Assistant, Wi-Fi or the eBUS link goes down.
 
-> ⚠️ **Status: work in progress.** Built and running in dry-run (shadow stage):
-> ebusd reading the boiler, Shelly + BLU configured, Node-RED flows live with no
-> writes. Failsafe script loaded but not yet run; relay not yet wired.
-> Sections marked *untested* have not been run on real hardware yet.
+> **Status (October 2026): live at Stage 0 (shadow).** HA switches the boiler
+> through the Shelly relay on room temperature; the boiler still runs at its panel
+> flow temperature. The Shelly failsafe is wired, runs on boot and passed all
+> [11 failsafe tests](docs/testing.md). ebusd reads the boiler and is set up so that
+> only the flow-setpoint command can be written; the flow writes themselves start at
+> Stage 1, after a checkpoint on the real boiler. [Results](docs/results.md) follow
+> as the stages progress.
 
 ## How it works
 
@@ -27,6 +30,8 @@ warm if Home Assistant, Wi-Fi or the eBUS link goes down.
   a PI term on the room error.
 - Control is handed over in **stages**: shadow → capped → assisted → auto.
   You approve each promotion; any comfort problem demotes it automatically.
+- A **heating season** switch turns everything off for summer, the failsafe
+  included.
 
 ## Contents
 
@@ -45,6 +50,7 @@ warm if Home Assistant, Wi-Fi or the eBUS link goes down.
 | [`nodered/`](nodered/) | Example Node-RED flows (sanitised) |
 | [`homeassistant/`](homeassistant/) | HA helper package and dashboard YAML |
 | [`PLACEHOLDERS.md`](PLACEHOLDERS.md) | Placeholders to replace with your own values |
+| [`tools/pin-ebusd-config.py`](tools/pin-ebusd-config.py) | Pins the ebusd definitions so only `SetMode` is writable |
 | [`tools/scan-secrets.sh`](tools/scan-secrets.sh) | Pre-push check for IPs, keys and personal data |
 
 ## Disclaimer
