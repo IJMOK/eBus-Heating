@@ -141,6 +141,10 @@ views:
             entities:
               - entity: input_number.heating_setpoint_day
               - entity: input_number.heating_setpoint_night
+              - entity: input_boolean.heating_holiday_home
+              - entity: input_boolean.heating_away
+              - entity: input_datetime.heating_away_return
+              - entity: input_number.heating_away_temp
               - entity: input_boolean.heating_optimum_start
               - entity: input_number.heating_preheat_max
               - entity: input_text.heating_warmup

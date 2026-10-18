@@ -17,7 +17,7 @@ demotes one stage straight away.
 
 | Term | Meaning |
 |---|---|
-| Heating day | Heat demand on for ≥ 60 min that day |
+| Heating day | Heat demand on for ≥ 60 min that day, and not an away day |
 | Good day | A heating day with no comfort event, room within ±0.5 °C of set for ≥ 90 % of occupied minutes, and < 30 min more than 0.5 °C below set. Occupied minutes exclude boosts and hot-water draws |
 | Short day | A heating day with a comfort event, or ≥ 30 occupied minutes more than 0.5 °C below set |
 | Good-day counter | Stage 0: live heating days. Stage 1+: **consecutive** good heating days. A short day resets it; a non-heating day leaves it alone |

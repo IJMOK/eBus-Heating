@@ -63,6 +63,18 @@ by the Shelly, which sees every packet (failsafe mode `timed` after 30 min).
 | Weekday without an alarm | Warm by the weekend start, until period end |
 | Weekend | Warm by the weekend start, until period end |
 
+**Holiday at home** (`input_boolean.heating_holiday_home`): every day uses the weekend
+schedule and phone alarms are ignored, e.g. over Christmas.
+
+**Away** (`input_boolean.heating_away`): holds `heating_away_temp` (16 °C) all day. With a
+return time in `heating_away_return`, it warms up so the house is at the day setpoint by
+then: the learned warm-up rate from the current room temperature, up to 6 hours early
+(coming back from 16 °C takes longer than a normal morning). The warm-up runs at 60 °C
+and is learned from like any other. At the return time Away switches itself off and the
+schedule takes over. Away days don't count in the nightly review. Without a return time
+it holds until you switch it off. If HA is down while you're away, the Shelly failsafe
+runs its own schedule (warmer than needed, never colder).
+
 When each period starts depends on **optimum start** (`input_boolean.heating_optimum_start`):
 
 - **Off** (default): the morning starts a fixed `heating_preheat_minutes` before the alarm;
