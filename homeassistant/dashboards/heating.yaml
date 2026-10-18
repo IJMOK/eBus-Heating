@@ -63,7 +63,10 @@ views:
             entity: input_button.heating_comfort_mode
             name: Comfort mode (4 h)
             tap_action:
-              action: toggle
+              action: perform-action
+              perform_action: input_button.press
+              target:
+                entity_id: input_button.heating_comfort_mode
           - type: tile
             entity: timer.heating_comfort_mode
             name: Comfort mode left

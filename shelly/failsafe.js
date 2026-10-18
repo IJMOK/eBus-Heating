@@ -102,6 +102,11 @@ function check() {
   });
 }
 
+// A mode change while MQTT is down is never published: re-send it on every (re)connect.
+MQTT.setConnectHandler(function () {
+  if (mode !== "") MQTT.publish(CFG.modeTopic, mode, 1, true);
+});
+
 // After boot, give HA one full stale period to send a heartbeat before taking over.
 hbChangedAt = sys().uptime;
 Timer.set(CFG.checkSec * 1000, true, check);

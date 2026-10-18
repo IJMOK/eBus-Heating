@@ -6,17 +6,17 @@ the date in the last column. Repeat after any firmware or flow change.
 
 | # | Test | How | Expected | Result |
 |---|---|---|---|---|
-| 1 | Relay switches the boiler | Toggle the Shelly in HA (heating on at the panel) | Boiler fires / stops; `DCRoomthermostat` follows (on = closed) | |
-| 2 | Power cut | Switch off the boiler's spur 10 s, back on | Shelly comes back with the relay **ON**; script runs; mode `ha` once the heartbeat arrives | |
-| 3 | Soft restart | Shelly → Reboot | Relay keeps its state; script runs; mode `ha` | |
-| 4 | HA/Node-RED stops | Stop the Node-RED add-on | After 15 min mode `local`; relay follows the BLU (on < 19.5, off > 20.5 in periods) | |
-| 5 | HA back | Start Node-RED | Mode `ha` within 1 min; notification "HA is back in control"; HA sets the relay | |
-| 6 | Dry-run hands over | Turn `heating_live` off | Heartbeat stops; after 15 min mode `local` | |
-| 7 | BLU lost too | Take a battery out of the BLU (with Node-RED stopped) | After 30 min mode `timed`; relay follows the fixed schedule | |
-| 8 | eBUS stick unplugged | Pull the stick's USB power | After 10 min notification "eBUS lost"; status `eBUS DOWN`; target 60, no writes; relay keeps room control | |
-| 9 | eBUS back | Plug the stick in | Notification "eBUS is back"; values update | |
-| 10 | Wi-Fi down | Switch the Shelly's AP off at the router (or power the router off) | Mode `local` after 15 min, heating carries on | |
-| 11 | Comfort mode | Press the dashboard button | Timer 4 h; target 60; demand on until day set + 1 °C; notification | |
+| 1 | Relay switches the boiler | Toggle the Shelly in HA (heating on at the panel) | Boiler fires / stops; `DCRoomthermostat` follows (on = closed) | 2026-10-18 ✅ contact closed, flame on after ~30 s (17 % modulation), flow 25.9 → 32.4 °C; off stopped it |
+| 2 | Power cut | Switch off the boiler's spur 10 s, back on | Shelly comes back with the relay **ON**; script runs; mode `ha` once the heartbeat arrives | 2026-10-18 ✅ back in ~25 s, relay ON, script running, mode `ha`. HA showed a stale "off" for ~90 s until the Shelly integration reconnected (fix: relay re-sent every 5 min) |
+| 3 | Soft restart | Shelly → Reboot | Relay keeps its state; script runs; mode `ha` | 2026-10-18 ✅ relay kept off, script running in seconds, mode `ha`; HA reconnected in ~50 s |
+| 4 | HA/Node-RED stops | Stop the Node-RED add-on | After 15 min mode `local`; relay follows the BLU (on < 19.5, off > 20.5 in periods) | 2026-10-18 ✅ last heartbeat 06:47, mode `local` at 07:02 (15 min); relay off (setback, room 19 °C) |
+| 5 | HA back | Start Node-RED | Mode `ha` within 1 min; notification "HA is back in control"; HA sets the relay | 2026-10-18 ✅ mode `ha` 24 s after the first heartbeat; notification arrived. Mode changes while Node-RED was down never reached HA (nothing to relay them) |
+| 6 | Dry-run hands over | Turn `heating_live` off | Heartbeat stops; after 15 min mode `local` | 2026-10-18 ✅ last heartbeat ~07:43:30, mode `local` at 07:58:52 (15 min); logbook + notification |
+| 7 | BLU lost too | Take a battery out of the BLU (with Node-RED stopped) | After 30 min mode `timed`; relay follows the fixed schedule | 2026-10-18 ✅ last packet 07:05:55, mode `timed` at 07:35:59; battery back → `local` within a minute |
+| 8 | eBUS stick unplugged | Pull the stick's USB power | After 10 min notification "eBUS lost"; status `eBUS DOWN`; target 60, no writes; relay keeps room control | 2026-10-18 ✅ "eBUS lost" ~30 s after unplugging (ebusd signal off; the 10-min FlowTemp check is the backstop); `eBUS DOWN`, target 60 |
+| 9 | eBUS back | Plug the stick in | Notification "eBUS is back"; values update | 2026-10-18 ✅ signal back 08:02:51, "eBUS is back" at 08:03:32 |
+| 10 | Wi-Fi down | Switch the Shelly's AP off at the router (or power the router off) | Mode `local` after 15 min, heating carries on | 2026-10-18 ✅ Shelly MAC-banned 17 min: no reboot, script kept running, mode `local`, reconnected in seconds. HA kept showing `ha` (mode change made offline was never published; fixed: the script re-publishes on MQTT reconnect) |
+| 11 | Comfort mode | Press the dashboard button | Timer 4 h; target 60; demand on until day set + 1 °C; notification | 2026-10-18 ✅ after two fixes (dashboard tile used `toggle` on an input_button; Node-RED ignored the first-ever press from `unknown`): timer 4 h, set 19.5, demand ON, notification |
 
 Restore everything after each test (battery back in, add-ons running, `heating_live` back on).
 
