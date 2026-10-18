@@ -141,6 +141,9 @@ views:
             entities:
               - entity: input_number.heating_setpoint_day
               - entity: input_number.heating_setpoint_night
+              - entity: input_boolean.heating_optimum_start
+              - entity: input_number.heating_preheat_max
+              - entity: input_text.heating_warmup
               - entity: input_number.heating_preheat_minutes
               - entity: input_number.heating_alarm_hold_minutes
               - entity: input_number.heating_boost_minutes

@@ -38,7 +38,7 @@ comfortable all year at a 60 °C flow, eased off as it gets milder.
 
 | Override | When |
 |---|---|
-| **Warm-up boost** | The first 45 min of each heating period (`heating_boost_minutes`) |
+| **Warm-up boost** | The first 45 min of each heating period (`heating_boost_minutes`), and with optimum start on, the whole warm-up until the "warm by" time |
 | **Comfort mode** | Dashboard button: 4 h at 60 °C on the day setpoint. Calls for heat until 1 °C above the day setpoint |
 | **Comfort guard** | Room more than 1 °C below set for 30 min while the curve is limiting the flow. Stays at 60 °C until within 0.3 °C. Counts as a **comfort event** |
 | **Outdoor temperature missing** | Holds the last value. If there has never been one, 60 °C |
@@ -59,16 +59,33 @@ by the Shelly, which sees every packet (failsafe mode `timed` after 30 min).
 
 | Day | Heating periods (day setpoint) |
 |---|---|
-| Weekday with a phone alarm today | `earliest alarm − preheat` to `latest alarm + hold`, then evening start to period end |
-| Weekday without an alarm | Weekend start to period end |
-| Weekend | Weekend start to period end |
+| Weekday with a phone alarm today | warm by the earliest alarm, until `latest alarm + hold`; then warm by the evening start, until period end |
+| Weekday without an alarm | Warm by the weekend start, until period end |
+| Weekend | Warm by the weekend start, until period end |
 
-Helpers: `heating_preheat_minutes` (60), `heating_alarm_hold_minutes` (60),
+When each period starts depends on **optimum start** (`input_boolean.heating_optimum_start`):
+
+- **Off** (default): the morning starts a fixed `heating_preheat_minutes` before the alarm;
+  the evening and weekend periods start at their times.
+- **On**: every period starts just early enough to be at the day setpoint by its time:
+  `(day set − room) ÷ warm-up rate + 10 min`, at most `heating_preheat_max` (120 min)
+  early. Already warm means no prestart; a mild day (faster rate) starts later. Once a
+  period has started it stays on. Warm-ups run at 60 °C, so the rate stays valid whatever
+  stage the curve is at.
+- **The warm-up rate is learned in both modes** from real warm-ups (live, a period starting
+  with the room 0.5 °C or more below the day set, until it reaches set − 0.2 °C), in four
+  outdoor bands (below 0, 0-5, 5-10, above 10 °C). It starts from cautious guesses of
+  1.0 / 1.3 / 1.6 / 2.0 °C/h and moves 30 % towards each new result. Each warm-up goes to
+  the logbook, and `input_text.heating_warmup` shows the rates. With it off, the hall
+  board and `heating_next` show when optimum start *would* have begun, so you can compare
+  before switching it on.
+
+Helpers: `heating_preheat_minutes` (60), `heating_preheat_max` (120), `heating_alarm_hold_minutes` (60),
 `heating_weekday_evening_start` (16:00), `heating_weekend_start` (09:00),
 `heating_period_end` (22:30).
 
 - Alarms come from each phone's **next alarm** sensor, if they fall today
-  between 04:00 and 10:00. The earliest starts the preheat and the latest sets the
+  between 04:00 and 10:00. The earliest is the "warm by" time and the latest sets the
   end of the morning. Each is remembered after it has rung.
 - If every phone sensor is unavailable on a weekday, the flow assumes 06:00, unless
   an "alarm off" calendar has an entry active now.

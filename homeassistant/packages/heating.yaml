@@ -5,6 +5,11 @@
 # "Set starting values" button on the Node-RED 40 tab.
 
 input_boolean:
+  heating_optimum_start:
+    name: Heating optimum start
+    icon: mdi:clock-start
+    # On: each heating period starts just early enough to be warm by its time (learned warm-up
+    # rate, at most heating_preheat_max early). Off: fixed preheat before the alarm.
   heating_season:
     name: Heating season
     icon: mdi:snowflake-thermometer
@@ -90,6 +95,13 @@ input_number:
     name: Heating preheat before alarm
     min: 0
     max: 180
+    step: 5
+    unit_of_measurement: min
+    mode: box
+  heating_preheat_max:
+    name: Heating optimum start max prestart
+    min: 15
+    max: 240
     step: 5
     unit_of_measurement: min
     mode: box
@@ -185,7 +197,10 @@ input_text:
     max: 32
   heating_next:
     name: Heating next block
-    max: 64
+    max: 128
+  heating_warmup:
+    name: Heating warm-up rates
+    max: 255
 
 input_button:
   heating_comfort_mode:
