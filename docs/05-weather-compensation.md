@@ -47,8 +47,11 @@ comfortable all year at a 60 °C flow, eased off as it gets milder.
 ## Heat demand (the relay)
 
 Hysteresis on the room temperature: **on below set − 0.2 °C, off above set + 0.2 °C**.
-If the room sensor goes stale (> 30 min), the relay follows the schedule like a
-timer.
+If the room sensor goes stale (no temperature or humidity update for 90 min), the
+relay follows the schedule like a timer. HA only records a reading when the value
+changes, so a steady room can be quiet for half an hour or more; the longer limit
+stops that looking like a dead sensor. A sensor that really dies is caught sooner
+by the Shelly, which sees every packet (failsafe mode `timed` after 30 min).
 
 ## Schedule
 
