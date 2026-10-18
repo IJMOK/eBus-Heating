@@ -92,6 +92,14 @@ The script publishes its mode, retained, on `heating/failsafe/mode`.
   loop has run in the last 3 minutes. In dry-run, or if Node-RED stalls, the
   Shelly runs the heating itself. A wired relay is never left stuck.
 - The mode is also kept in KVS `fs_mode`.
+- **Mode reaches HA without Node-RED.** Every mode change is published (retained) on
+  MQTT, re-sent on each MQTT reconnect, and also POSTed to an HA webhook, retried every
+  minute until HA accepts it. The automations in `homeassistant/packages/heating.yaml`
+  set `input_text.heating_failsafe_mode` and notify on each change. To set it up, add
+  a long random `heating_failsafe_webhook: <WEBHOOK_ID>` to `secrets.yaml`, restart
+  HA (or reload automations), and store the URL on the Shelly:
+  `KVS.Set {"key": "fs_webhook", "value": "http://<HA_HOST>:8123/api/webhook/<WEBHOOK_ID>"}`.
+  Without the key the script just skips the webhook.
 
 Load it with **Scripts → Add script**, or `Script.Create` + `Script.PutCode`.
 Leave **"Run on startup" off** until the tests in [testing.md](testing.md) pass.

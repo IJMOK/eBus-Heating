@@ -1,7 +1,8 @@
 // eBus-Heating failsafe for a Shelly 1 Gen4 across the boiler's room-stat terminals.
 // Docs: docs/04-shelly-failsafe.md
 //
-// Modes (published retained on CFG.modeTopic, and kept in KVS "fs_mode"):
+// Modes (published retained on CFG.modeTopic, posted to the HA webhook whose URL is
+// in KVS CFG.webhookKey, and kept in KVS "fs_mode"):
 //   ha     HA heartbeat is fresh: do nothing, HA switches the relay.
 //   local  Heartbeat stale: thermostat on the BLU H&T (day/night bands).
 //   timed  Heartbeat and BLU stale: fixed schedule.
@@ -22,6 +23,7 @@ let CFG = {
   weekday: [[300, 420], [960, 1350]], // 05:00-07:00, 16:00-22:30
   weekend: [[540, 1350]],             // 09:00-22:30
   modeTopic: "heating/failsafe/mode",
+  webhookKey: "fs_webhook",       // KVS key with the HA webhook URL (optional; works without Node-RED)
   checkSec: 60,
 };
 
@@ -31,6 +33,8 @@ let lastTempTs = null;
 let tempChangedAt = -1e9; // uptime (s) when a new BLU reading last arrived
 let mode = "";
 let want = null;          // relay state the failsafe wants
+let webhookUrl = null;
+let posted = true;        // false until the current mode has reached HA
 
 function sys() { return Shelly.getComponentStatus("sys"); }
 
@@ -57,6 +61,17 @@ function report(m) {
   print("failsafe mode: " + m);
   Shelly.call("KVS.Set", { key: "fs_mode", value: m });
   if (MQTT.isConnected()) MQTT.publish(CFG.modeTopic, m, 1, true);
+  posted = false;
+  postMode();
+}
+
+// Post the mode straight to HA; retried every check until it gets through.
+function postMode() {
+  if (posted || !webhookUrl || mode === "") return;
+  Shelly.call("HTTP.POST", { url: webhookUrl, body: JSON.stringify({ mode: mode }),
+                            content_type: "application/json", timeout: 10 }, function (res, err) {
+    if (err === 0 && res && res.code >= 200 && res.code < 300) posted = true;
+  });
 }
 
 function decide() {
@@ -99,12 +114,17 @@ function check() {
       tempChangedAt = up;
     }
     decide();
+    postMode();
   });
 }
 
 // A mode change while MQTT is down is never published: re-send it on every (re)connect.
 MQTT.setConnectHandler(function () {
   if (mode !== "") MQTT.publish(CFG.modeTopic, mode, 1, true);
+});
+
+Shelly.call("KVS.Get", { key: CFG.webhookKey }, function (res, err) {
+  if (err === 0 && res && res.value) { webhookUrl = res.value; postMode(); }
 });
 
 // After boot, give HA one full stale period to send a heartbeat before taking over.

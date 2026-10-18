@@ -15,6 +15,7 @@ with your own.
 | `<BLU_MAC>` | Shelly BLU H&T MAC address |
 | `<SHELLY_MQTT_PREFIX>` | The Shelly's MQTT topic prefix (default: its device id, e.g. `shelly1g4-<mac>`) |
 | `<NOTIFY_SERVICE>` | Your phone's notify service, e.g. `notify.mobile_app_<phone>` |
+| `<WEBHOOK_ID>` | A long random ID for the failsafe-mode webhook (kept in `secrets.yaml`) |
 
 ## Entity IDs: generic names
 

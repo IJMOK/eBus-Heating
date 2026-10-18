@@ -175,6 +175,9 @@ input_text:
   heating_last_decision:
     name: Heating last decision
     max: 255
+  heating_failsafe_mode:
+    name: Shelly failsafe mode
+    max: 32
 
 input_button:
   heating_comfort_mode:
@@ -189,3 +192,48 @@ timer:
     name: Heating comfort mode
     duration: "04:00:00"
     restore: true
+
+# The Shelly failsafe posts its mode to this webhook on every change (and retries), so HA
+# hears it even when Node-RED is down. Node-RED also mirrors it from MQTT; whichever comes
+# first sets the text, and the second automation notifies once per change.
+automation:
+  - id: heating_failsafe_mode_webhook
+    alias: "Heating: Shelly failsafe mode (webhook)"
+    mode: queued
+    triggers:
+      - trigger: webhook
+        webhook_id: !secret heating_failsafe_webhook
+        allowed_methods: [POST]
+        local_only: true
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.json is defined and trigger.json.mode in ['ha', 'local', 'timed', 'warm'] }}"
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.heating_failsafe_mode
+        data:
+          value: "{{ trigger.json.mode }}"
+
+  - id: heating_failsafe_mode_notify
+    alias: "Heating: Shelly failsafe mode changed"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_text.heating_failsafe_mode
+        not_from: ["unknown", "unavailable", ""]
+        not_to: ["unknown", "unavailable", ""]
+    variables:
+      text: >-
+        {{ 'Shelly failsafe: HA is back in control.' if trigger.to_state.state == 'ha'
+           else 'Shelly failsafe active (' ~ trigger.to_state.state ~ '): the Shelly is running the heating on its own.' }}
+    actions:
+      - action: logbook.log
+        data:
+          name: Heating
+          message: "{{ text }}"
+          entity_id: input_text.heating_failsafe_mode
+      - action: notify.<NOTIFY_SERVICE>
+        data:
+          title: Heating
+          message: "{{ text }}"

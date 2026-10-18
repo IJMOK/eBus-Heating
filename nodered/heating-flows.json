@@ -480,7 +480,7 @@
     "type": "function",
     "z": "bab21c03fa24a392",
     "name": "Failsafe mode → HA",
-    "func": "// Mirror the Shelly failsafe mode (retained MQTT) into HA; notify on changes.\nconst cfg = global.get('heatingCfg');\nconst mode = String(msg.payload);\nconst prev = flow.get('fsMode');\nflow.set('fsMode', mode);\nconst out = [{ payload: { action: 'input_text.set_value', target: { entity_id: 'input_text.heating_failsafe_mode' }, data: { value: mode } } }];\nif (prev !== undefined && prev !== mode && cfg) {\n    const text = mode === 'ha' ? 'Shelly failsafe: HA is back in control.'\n        : `Shelly failsafe active (${mode}): the Shelly is running the heating on its own.`;\n    for (const n of cfg.notifyAll) out.push({ payload: { action: n, target: {}, data: { title: 'Heating', message: text } } });\n    out.push({ payload: { action: 'logbook.log', target: {}, data: { name: 'Heating', message: text, entity_id: 'input_text.heating_failsafe_mode' } } });\n}\nnode.status({ fill: mode === 'ha' ? 'green' : 'red', shape: 'dot', text: mode });\nreturn [out];\n",
+    "func": "// Mirror the Shelly failsafe mode (retained MQTT) into HA. The Shelly also posts it to\n// an HA webhook, and an HA automation notifies on changes, so this works without Node-RED.\nconst mode = String(msg.payload);\nnode.status({ fill: mode === 'ha' ? 'green' : 'red', shape: 'dot', text: mode });\nreturn [[{ payload: { action: 'input_text.set_value', target: { entity_id: 'input_text.heating_failsafe_mode' }, data: { value: mode } } }]];\n",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
