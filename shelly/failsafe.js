@@ -7,6 +7,8 @@
 //   local  Heartbeat stale: thermostat on the BLU H&T (day/night bands).
 //   timed  Heartbeat and BLU stale: fixed schedule.
 //   warm   No clock either: relay ON (fail warm).
+// Out of heating season (KVS "fs_season" = false, written by HA) the relay stays OFF
+// in local/timed/warm.
 //
 // The heartbeat is any changing value written to KVS key CFG.hbKey (HA writes the
 // time every minute while it is in live control). Staleness is measured with the
@@ -23,6 +25,7 @@ let CFG = {
   weekday: [[300, 420], [960, 1350]], // 05:00-07:00, 16:00-22:30
   weekend: [[540, 1350]],             // 09:00-22:30
   modeTopic: "heating/failsafe/mode",
+  seasonKey: "fs_season",         // KVS key: false = summer, failsafe keeps the relay off
   webhookKey: "fs_webhook",       // KVS key with the HA webhook URL (optional; works without Node-RED)
   checkSec: 60,
 };
@@ -34,6 +37,7 @@ let tempChangedAt = -1e9; // uptime (s) when a new BLU reading last arrived
 let mode = "";
 let want = null;          // relay state the failsafe wants
 let webhookUrl = null;
+let season = true;        // last value of KVS seasonKey (missing = in season)
 let posted = true;        // false until the current mode has reached HA
 
 function sys() { return Shelly.getComponentStatus("sys"); }
@@ -100,6 +104,7 @@ function decide() {
     want = true;
     report("warm");
   }
+  if (!season) want = false;
   if (out !== want) Shelly.call("Switch.Set", { id: 0, on: want });
 }
 
@@ -113,8 +118,11 @@ function check() {
       lastTempTs = t.last_updated_ts;
       tempChangedAt = up;
     }
-    decide();
-    postMode();
+    Shelly.call("KVS.Get", { key: CFG.seasonKey }, function (r, e) {
+      season = !(e === 0 && r && r.value === false);
+      decide();
+      postMode();
+    });
   });
 }
 

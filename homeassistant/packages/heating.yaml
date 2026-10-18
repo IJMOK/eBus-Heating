@@ -5,6 +5,11 @@
 # "Set starting values" button on the Node-RED 40 tab.
 
 input_boolean:
+  heating_season:
+    name: Heating season
+    icon: mdi:snowflake-thermometer
+    # Off = summer: no heat demand (the comfort button still works), and the Shelly
+    # failsafe keeps the relay off. Created off: switch it on for winter.
   heating_live:
     name: Heating live control
     icon: mdi:radiator

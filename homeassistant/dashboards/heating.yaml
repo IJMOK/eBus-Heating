@@ -119,6 +119,7 @@ views:
             heading: Handover
           - type: entities
             entities:
+              - entity: input_boolean.heating_season
               - entity: input_select.heating_stage
               - entity: input_boolean.heating_live
               - entity: input_number.heating_good_days

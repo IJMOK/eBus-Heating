@@ -92,6 +92,10 @@ The script publishes its mode, retained, on `heating/failsafe/mode`.
   loop has run in the last 3 minutes. In dry-run, or if Node-RED stalls, the
   Shelly runs the heating itself. A wired relay is never left stuck.
 - The mode is also kept in KVS `fs_mode`.
+- **Out of season** (`input_boolean.heating_season` off), HA writes KVS `fs_season` =
+  `false` (on a change and hourly, live or not) and the script keeps the relay **off** in
+  `local`, `timed` and `warm`. Turning live control off is not a summer switch on its
+  own: the failsafe would still heat on a cool evening.
 - **Mode reaches HA without Node-RED.** Every mode change is published (retained) on
   MQTT, re-sent on each MQTT reconnect, and also POSTed to an HA webhook, retried every
   minute until HA accepts it. The automations in `homeassistant/packages/heating.yaml`
