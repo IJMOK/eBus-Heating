@@ -183,6 +183,9 @@ input_text:
   heating_failsafe_mode:
     name: Shelly failsafe mode
     max: 32
+  heating_next:
+    name: Heating next block
+    max: 64
 
 input_button:
   heating_comfort_mode:
