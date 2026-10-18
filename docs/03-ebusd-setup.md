@@ -104,7 +104,7 @@ controller on the bus there's less traffic, but the boiler itself still talks.
    - The Mosquitto add-on's host, user and password are picked up automatically.
      Don't set `--mqtthost` unless you're using an external broker.
    - No `--accesslevel` yet: without it ebusd can't write to the boiler at all.
-     See the access-level section below for when to add it.
+     See the access-level section below for when to add it (with pinned definitions).
    - *Untested:* check the option names against the add-on's Configuration tab,
      because the schema has changed between versions.
 3. Start it and watch the log. You want to see:
@@ -174,18 +174,42 @@ With `--accesslevel=*`, ebusd will also write installer settings such as
 Anything that can publish to the broker can then change them, and depending on
 `mqtt-hassio.cfg` they may show up as controls in HA.
 
-On the BAI00 tested here, the active `SetMode` write needs the same access level,
-so there's no setting that allows only `SetMode`. That gives a useful staging:
+On the BAI00 tested here, the active `SetMode` write sits at access level `install`
+upstream, and the installer settings at `install_NOT_YET_CONFIRMED`. ebusd matches
+levels as whole words, so `--accesslevel=install` would unlock only `SetMode` today.
+But an upstream config update that confirms those settings would quietly unlock them
+too. So:
 
 - **Until you start writing (shadow stage): leave `--accesslevel` off.** ebusd
   then can't write anything, whatever a flow or dashboard does. Check with
   `curl "http://<HA_HOST>:8889/data/bai?def&write"`: only passive messages
   should have `"write": true`.
-- **When you start writing**, either turn it on and keep the installer messages
-  out of HA in `mqtt-hassio.cfg`, or add a custom definition that makes only
-  `SetMode` writable.
+- **When you start writing: pin the definitions and give `SetMode` its own level.**
+  [`tools/pin-ebusd-config.py`](../tools/pin-ebusd-config.py) mirrors the definitions
+  ebusd loads today (top-level and Vaillant CSVs plus their includes) into a folder and
+  changes one line: the active `SetMode` write moves from `install` to `heating`.
 
-In the add-on config above, add `--accesslevel=*` only at that point.
+  ```sh
+  python tools/pin-ebusd-config.py ebusd-config        # then copy the folder to the add-on's
+                                                       # config share (addon_configs/<slug>_ebusd/)
+  ```
+
+  Add to the add-on's `commandline_options`:
+
+  ```yaml
+     - "--configpath=/config/ebusd-config/"
+     - "--accesslevel=heating"
+  ```
+
+  Restart the add-on and check:
+  - the log has the same scan result as before and no `ERR` loading files;
+  - `curl "http://<HA_HOST>:8889/data/bai/SetMode?def"` still shows the message, and
+    the number of `messages` in `http://<HA_HOST>:8889/data` matches the count from before;
+  - `mqtt-hassio.cfg` keeps `filter-level = ^$`, so `SetMode` (level `heating`) never
+    becomes an HA entity. Writes go only to `ebusd/bai/SetMode/set` from the flow.
+
+  The definitions no longer update by themselves: re-run the tool, diff and redeploy
+  when you want upstream changes.
 
 ## Alternative: micro-ebusd
 
