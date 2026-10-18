@@ -101,6 +101,11 @@ controller on the bus there's less traffic, but the boiler itself still talks.
      - "--httpport=8889"                    # read-only JSON: http://<HA_HOST>:8889/data
    ```
 
+   In the add-on's Configuration tab (UI mode) `commandline_options` is a list with
+   **one flag per entry**: type `--scanconfig`, not `- "--scanconfig"`. Pasting the YAML
+   lines into the entries passes the dashes and quotes to ebusd, which then refuses to
+   start (`invalid arguments`).
+
    - The Mosquitto add-on's host, user and password are picked up automatically.
      Don't set `--mqtthost` unless you're using an external broker.
    - No `--accesslevel` yet: without it ebusd can't write to the boiler at all.
@@ -194,7 +199,8 @@ too. So:
                                                        # config share (addon_configs/<slug>_ebusd/)
   ```
 
-  Add to the add-on's `commandline_options`:
+  Add two entries to the add-on's `commandline_options` (`/config/` in the add-on is
+  `addon_configs/<slug>_ebusd/` on the host):
 
   ```yaml
      - "--configpath=/config/ebusd-config/"
