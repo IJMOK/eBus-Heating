@@ -39,7 +39,7 @@ comfortable all year at a 60 °C flow, eased off as it gets milder.
 | Override | When |
 |---|---|
 | **Warm-up boost** | The first 45 min of each heating period (`heating_boost_minutes`), and with optimum start on, the whole warm-up until the "warm by" time |
-| **Comfort mode** | Dashboard button: 4 h at 60 °C on the day setpoint. Calls for heat until 1 °C above the day setpoint |
+| **Comfort mode** | Dashboard button: 4 h at 60 °C, at least the Home temperature. Calls for heat until 1 °C above set |
 | **Comfort guard** | Room more than 1 °C below set for 30 min while the curve is limiting the flow. Stays at 60 °C until within 0.3 °C. Counts as a **comfort event** |
 | **Outdoor temperature missing** | Holds the last value. If there has never been one, 60 °C |
 | **eBUS down** | No boiler data for 10 min. The boiler runs at its panel setting and nothing is written |
@@ -57,17 +57,30 @@ by the Shelly, which sees every packet (failsafe mode `timed` after 30 min).
 
 ## Schedule
 
-| Day | Heating periods (day setpoint) |
-|---|---|
-| Weekday with a phone alarm today | warm by the earliest alarm, until `latest alarm + hold`; then warm by the evening start, until period end |
-| Weekday without an alarm | Warm by the weekend start, until period end |
-| Weekend | Warm by the weekend start, until period end |
+Every weekday has a **day type** (`input_select.heating_day_mon` … `_sun`: Work, Home or
+Out). Each period has its own times and temperature:
 
-**Holiday at home** (`input_boolean.heating_holiday_home`): every day uses the weekend
-schedule and phone alarms are ignored, e.g. over Christmas.
+| Day type | Heating periods |
+|---|---|
+| **Work**, with a phone alarm today | Warm by the earliest alarm, until `latest alarm + hold`, at `heating_work_morning_temp`; then `heating_work_evening_start` to `heating_work_end` at `heating_work_evening_temp` |
+| **Work**, no alarm today | Runs as a Home day |
+| **Home** | `heating_home_start` to `heating_home_end` at `heating_home_temp` |
+| **Out** | Evening only: `heating_out_start` to `heating_out_end` at `heating_out_temp` |
+| **Off** (calendar only) | No period: the night temperature all day |
+
+Outside the periods the house holds `heating_setpoint_night`.
+
+**Calendar overrides:** an event in a calendar called **Heating** whose title starts with
+`Home`, `Work`, `Out` or `Off` sets the day type of every date it covers (all-day events are
+easiest). `sensor.heating_calendar_days` reads it every 15 minutes for today and the next two
+days; its state says `no calendar` until the calendar exists. Precedence: **away > calendar >
+holiday at home > the week**.
+
+**Holiday at home** (`input_boolean.heating_holiday_home`): every day is a Home day and phone
+alarms are ignored, e.g. over Christmas. A calendar event still changes a single date.
 
 **Away** (`input_boolean.heating_away`): holds `heating_away_temp` (16 °C) all day. With a
-return time in `heating_away_return`, it warms up so the house is at the day setpoint by
+return time in `heating_away_return`, it warms up so the house is at the Home temperature by
 then: the learned warm-up rate from the current room temperature, up to 6 hours early
 (coming back from 16 °C takes longer than a normal morning). The warm-up runs at 60 °C
 and is learned from like any other. At the return time Away switches itself off and the
@@ -78,23 +91,23 @@ runs its own schedule (warmer than needed, never colder).
 When each period starts depends on **optimum start** (`input_boolean.heating_optimum_start`):
 
 - **Off** (default): the morning starts a fixed `heating_preheat_minutes` before the alarm;
-  the evening and weekend periods start at their times.
-- **On**: every period starts just early enough to be at the day setpoint by its time:
-  `(day set − room) ÷ warm-up rate + 10 min`, at most `heating_preheat_max` (120 min)
+  the other periods start at their times.
+- **On**: every period starts just early enough to be at its temperature by its time:
+  `(period temperature − room) ÷ warm-up rate + 10 min`, at most `heating_preheat_max` (120 min)
   early. Already warm means no prestart; a mild day (faster rate) starts later. Once a
   period has started it stays on. Warm-ups run at 60 °C, so the rate stays valid whatever
   stage the curve is at.
 - **The warm-up rate is learned in both modes** from real warm-ups (live, a period starting
-  with the room 0.5 °C or more below the day set, until it reaches set − 0.2 °C), in four
+  with the room 0.5 °C or more below its temperature, until it reaches that − 0.2 °C), in four
   outdoor bands (below 0, 0-5, 5-10, above 10 °C). It starts from cautious guesses of
   1.0 / 1.3 / 1.6 / 2.0 °C/h and moves 30 % towards each new result. Each warm-up goes to
   the logbook, and `input_text.heating_warmup` shows the rates. With it off, the hall
   board and `heating_next` show when optimum start *would* have begun, so you can compare
   before switching it on.
 
-Helpers: `heating_preheat_minutes` (60), `heating_preheat_max` (120), `heating_alarm_hold_minutes` (60),
-`heating_weekday_evening_start` (16:00), `heating_weekend_start` (09:00),
-`heating_period_end` (22:30).
+Helpers: `heating_preheat_minutes` (60), `heating_preheat_max` (120), `heating_alarm_hold_minutes` (60).
+Starting values ("Set starting values" button): all period temperatures 19.5 °C; Work evening
+16:00–22:30, Home 09:00–22:30, Out 17:30–22:30; Monday to Friday Work, weekends Home.
 
 - Alarms come from each phone's **next alarm** sensor, if they fall today
   between 04:00 and 10:00. The earliest is the "warm by" time and the latest sets the

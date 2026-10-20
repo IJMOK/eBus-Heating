@@ -8,7 +8,8 @@ input_boolean:
   heating_holiday_home:
     name: Heating holiday at home
     icon: mdi:sofa
-    # On: every day uses the weekend schedule (phone alarms ignored), e.g. over Christmas.
+    # On: every day is a Home day (phone alarms ignored), e.g. over Christmas. A "Heating"
+    # calendar event still overrides a single date.
   heating_away:
     name: Heating away
     icon: mdi:airplane
@@ -50,6 +51,31 @@ input_select:
       - "1 Capped"
       - "2 Assisted"
       - "3 Auto"
+  # Day type per weekday. Work: a morning from the phone alarms, then the evening. Home: one
+  # daytime period. Out: the evening only. A "Heating" calendar event for a date overrides it
+  # (sensor.heating_calendar_days), and holiday at home makes every day a Home day.
+  heating_day_mon: &day_type
+    name: Heating Monday
+    icon: mdi:calendar-week
+    options: [Work, Home, Out]
+  heating_day_tue:
+    <<: *day_type
+    name: Heating Tuesday
+  heating_day_wed:
+    <<: *day_type
+    name: Heating Wednesday
+  heating_day_thu:
+    <<: *day_type
+    name: Heating Thursday
+  heating_day_fri:
+    <<: *day_type
+    name: Heating Friday
+  heating_day_sat:
+    <<: *day_type
+    name: Heating Saturday
+  heating_day_sun:
+    <<: *day_type
+    name: Heating Sunday
 
 input_number:
   # --- Tunables (learning adjusts slope, offset and floor) ---
@@ -85,13 +111,23 @@ input_number:
     step: 1
     unit_of_measurement: "°C"
     mode: box
-  heating_setpoint_day:
-    name: Heating setpoint day
+  # Temperature of each period of the day types
+  heating_work_morning_temp: &period_temp
+    name: Heating Work morning
     min: 15
     max: 23
     step: 0.5
     unit_of_measurement: "°C"
     mode: box
+  heating_work_evening_temp:
+    <<: *period_temp
+    name: Heating Work evening
+  heating_home_temp:
+    <<: *period_temp
+    name: Heating Home day
+  heating_out_temp:
+    <<: *period_temp
+    name: Heating Out evening
   heating_setpoint_night:
     name: Heating setpoint night
     min: 10
@@ -191,18 +227,26 @@ input_datetime:
     name: Heating away return
     has_date: true
     has_time: true
-  heating_weekday_evening_start:
-    name: Heating weekday evening start
+  # Times of the day types (the Work morning comes from the phone alarms)
+  heating_work_evening_start: &period_time
+    name: Heating Work evening from
     has_date: false
     has_time: true
-  heating_period_end:
-    name: Heating period end
-    has_date: false
-    has_time: true
-  heating_weekend_start:
-    name: Heating weekend start
-    has_date: false
-    has_time: true
+  heating_work_end:
+    <<: *period_time
+    name: Heating Work off at
+  heating_home_start:
+    <<: *period_time
+    name: Heating Home from
+  heating_home_end:
+    <<: *period_time
+    name: Heating Home off at
+  heating_out_start:
+    <<: *period_time
+    name: Heating Out from
+  heating_out_end:
+    <<: *period_time
+    name: Heating Out off at
 
 input_text:
   heating_status:
@@ -238,6 +282,56 @@ timer:
 # The Shelly failsafe posts its mode to this webhook on every change (and retries), so HA
 # hears it even when Node-RED is down. Node-RED also mirrors it from MQTT; whichever comes
 # first sets the text, and the second automation notifies once per change.
+# Day-type overrides from the "Heating" calendar, for today and the next two days. An event whose
+# title starts with Work, Home, Out or Off (any case) sets the day type of every date it covers;
+# the first one wins. Node-RED reads the `days` attribute ({"2026-12-24": "Home", ...}). The state
+# says whether the calendar was found, so a missing calendar shows up instead of failing silently.
+template:
+  - triggers:
+      - trigger: time_pattern
+        minutes: /15
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+    actions:
+      - variables:
+          cal_id: calendar.heating
+      - action: calendar.get_events
+        target:
+          entity_id: "{{ cal_id }}"
+        data:
+          start_date_time: "{{ today_at().isoformat() }}"
+          duration:
+            days: 3
+        response_variable: cal
+        continue_on_error: true
+    sensor:
+      - name: Heating calendar days
+        unique_id: heating_calendar_days
+        icon: mdi:calendar-star
+        state: "{{ 'ok' if cal is defined and cal_id in cal else 'no calendar' }}"
+        attributes:
+          days: >-
+            {% set evs = cal[cal_id].events if cal is defined and cal_id in cal else [] %}
+            {% set ns = namespace(d={}) %}
+            {% for i in range(3) %}
+              {% set day = (today_at() + timedelta(days=i)).date().isoformat() %}
+              {% for e in evs | sort(attribute='start') %}
+                {% if 'T' in e.start %}
+                  {% set hit = as_local(as_datetime(e.start)).date().isoformat() <= day
+                     <= as_local(as_datetime(e.end) - timedelta(seconds=1)).date().isoformat() %}
+                {% else %}
+                  {% set hit = e.start <= day < e.end %}
+                {% endif %}
+                {% set word = ((e.summary | default('')).split(' ') | first | lower).strip(':,.-') %}
+                {% if hit and day not in ns.d and word in ['work', 'home', 'out', 'off'] %}
+                  {% set ns.d = dict(ns.d, **{day: word | capitalize}) %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {{ ns.d }}
+
 automation:
   - id: heating_failsafe_mode_webhook
     alias: "Heating: Shelly failsafe mode (webhook)"

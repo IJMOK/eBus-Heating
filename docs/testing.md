@@ -16,7 +16,7 @@ the date in the last column. Repeat after any firmware or flow change.
 | 8 | eBUS stick unplugged | Pull the stick's USB power | After 10 min notification "eBUS lost"; status `eBUS DOWN`; target 60, no writes; relay keeps room control | 2026-10-18 ✅ "eBUS lost" ~30 s after unplugging (ebusd signal off; the 10-min FlowTemp check is the backstop); `eBUS DOWN`, target 60 |
 | 9 | eBUS back | Plug the stick in | Notification "eBUS is back"; values update | 2026-10-18 ✅ signal back 08:02:51, "eBUS is back" at 08:03:32 |
 | 10 | Wi-Fi down | Switch the Shelly's AP off at the router (or power the router off) | Mode `local` after 15 min, heating carries on | 2026-10-18 ✅ Shelly MAC-banned 17 min: no reboot, script kept running, mode `local`, reconnected in seconds. HA kept showing `ha` (mode change made offline was never published; fixed: the script re-publishes on MQTT reconnect) |
-| 11 | Comfort mode | Press the dashboard button | Timer 4 h; target 60; demand on until day set + 1 °C; notification | 2026-10-18 ✅ after two fixes (dashboard tile used `toggle` on an input_button; Node-RED ignored the first-ever press from `unknown`): timer 4 h, set 19.5, demand ON, notification |
+| 11 | Comfort mode | Press the dashboard button | Timer 4 h; target 60; demand on until set + 1 °C; notification | 2026-10-18 ✅ after two fixes (dashboard tile used `toggle` on an input_button; Node-RED ignored the first-ever press from `unknown`): timer 4 h, set 19.5, demand ON, notification |
 
 Restore everything after each test (battery back in, add-ons running, `heating_live` back on).
 

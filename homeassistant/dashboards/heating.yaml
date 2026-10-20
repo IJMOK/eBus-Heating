@@ -139,7 +139,6 @@ views:
             heading: Schedule
           - type: entities
             entities:
-              - entity: input_number.heating_setpoint_day
               - entity: input_number.heating_setpoint_night
               - entity: input_boolean.heating_holiday_home
               - entity: input_boolean.heating_away
@@ -151,13 +150,43 @@ views:
               - entity: input_number.heating_preheat_minutes
               - entity: input_number.heating_alarm_hold_minutes
               - entity: input_number.heating_boost_minutes
-              - entity: input_datetime.heating_weekday_evening_start
-              - entity: input_datetime.heating_weekend_start
-              - entity: input_datetime.heating_period_end
               - entity: sensor.phone1_next_alarm
                 name: Next alarm (phone 1)
               - entity: sensor.phone2_next_alarm
                 name: Next alarm (phone 2)
+              - entity: sensor.heating_calendar_days
+                name: Heating calendar
+          - type: heading
+            heading: Week
+          - type: entities
+            entities:
+              - input_select.heating_day_mon
+              - input_select.heating_day_tue
+              - input_select.heating_day_wed
+              - input_select.heating_day_thu
+              - input_select.heating_day_fri
+              - input_select.heating_day_sat
+              - input_select.heating_day_sun
+          - type: heading
+            heading: Day types
+          - type: entities
+            entities:
+              - type: section
+                label: Work (morning from the phone alarms, then the evening)
+              - input_number.heating_work_morning_temp
+              - input_datetime.heating_work_evening_start
+              - input_datetime.heating_work_end
+              - input_number.heating_work_evening_temp
+              - type: section
+                label: Home (one daytime period)
+              - input_datetime.heating_home_start
+              - input_datetime.heating_home_end
+              - input_number.heating_home_temp
+              - type: section
+                label: Out (evening only)
+              - input_datetime.heating_out_start
+              - input_datetime.heating_out_end
+              - input_number.heating_out_temp
           - type: heading
             heading: Boiler health
           - type: entities
