@@ -70,11 +70,13 @@ Out). Each period has its own times and temperature:
 
 Outside the periods the house holds `heating_setpoint_night`.
 
-**Calendar overrides:** an event in a calendar called **Heating** whose title starts with
-`Home`, `Work`, `Out` or `Off` sets the day type of every date it covers (all-day events are
-easiest). `sensor.heating_calendar_days` reads it every 15 minutes for today and the next two
-days; its state says `no calendar` until the calendar exists. Precedence: **away > calendar >
-holiday at home > the week**.
+**Calendar overrides:** the same "alarm" calendar the phones use (an entry there = no phone
+alarm that day). An event whose title starts with `NWD` (non-working day) or `Home` makes every
+date it covers a Home day; `Off` holds the night temperature all day. `Work` and `Out` are read
+too, but an entry there would also silence the phone alarm, so one-off Work or Out days are
+better set on the week. `sensor.heating_calendar_days` reads the calendar every 15 minutes for
+today and the next two days; its state says `no calendar` if it can't be read. Precedence:
+**away > calendar > holiday at home > the week**.
 
 **Holiday at home** (`input_boolean.heating_holiday_home`): every day is a Home day and phone
 alarms are ignored, e.g. over Christmas. A calendar event still changes a single date.

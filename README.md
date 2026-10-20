@@ -44,6 +44,7 @@ warm if Home Assistant, Wi-Fi or the eBUS link goes down.
 | [`docs/05-weather-compensation.md`](docs/05-weather-compensation.md) | The control law and its tunables |
 | [`docs/06-staged-handover.md`](docs/06-staged-handover.md) | Stages, promotion, demotion, learning |
 | [`docs/07-dashboard.md`](docs/07-dashboard.md) | Dashboard |
+| [`enclosure/`](enclosure/) | 3D-printable wall box for the Shelly and the stick (OpenSCAD + STLs) |
 | [`docs/testing.md`](docs/testing.md) | Failsafe tests to pass before going live |
 | [`docs/results.md`](docs/results.md) | What happened, and the final learned curve |
 | [`shelly/failsafe.js`](shelly/failsafe.js) | Shelly script |

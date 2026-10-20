@@ -9,6 +9,7 @@
 | **Home Assistant** with Mosquitto, Node-RED and the ebusd add-on | Runs the control | Outdoor temperature from the Met Office integration (any outdoor sensor works) |
 | 2-core cable, 0.5–0.75 mm² | Boiler eBUS terminals to the stick | |
 | 12 V DC plug-in supply (optional) | Configure the Shelly on the bench without mains wiring | Must be stabilised DC |
+| Wall enclosure (optional) | Houses the Shelly and the stick next to the boiler, mains and low voltage kept apart | 3D-printed in flame-retardant ABS (UL94 V-0), see [`enclosure/`](../enclosure/) |
 
 ## Why these parts
 

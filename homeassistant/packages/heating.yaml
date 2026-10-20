@@ -8,7 +8,7 @@ input_boolean:
   heating_holiday_home:
     name: Heating holiday at home
     icon: mdi:sofa
-    # On: every day is a Home day (phone alarms ignored), e.g. over Christmas. A "Heating"
+    # On: every day is a Home day (phone alarms ignored), e.g. over Christmas. An Alarm
     # calendar event still overrides a single date.
   heating_away:
     name: Heating away
@@ -52,7 +52,7 @@ input_select:
       - "2 Assisted"
       - "3 Auto"
   # Day type per weekday. Work: a morning from the phone alarms, then the evening. Home: one
-  # daytime period. Out: the evening only. A "Heating" calendar event for a date overrides it
+  # daytime period. Out: the evening only. An Alarm calendar event for a date overrides it
   # (sensor.heating_calendar_days), and holiday at home makes every day a Home day.
   heating_day_mon: &day_type
     name: Heating Monday
@@ -282,10 +282,12 @@ timer:
 # The Shelly failsafe posts its mode to this webhook on every change (and retries), so HA
 # hears it even when Node-RED is down. Node-RED also mirrors it from MQTT; whichever comes
 # first sets the text, and the second automation notifies once per change.
-# Day-type overrides from the "Heating" calendar, for today and the next two days. An event whose
-# title starts with Work, Home, Out or Off (any case) sets the day type of every date it covers;
-# the first one wins. Node-RED reads the `days` attribute ({"2026-12-24": "Home", ...}). The state
-# says whether the calendar was found, so a missing calendar shows up instead of failing silently.
+# Day-type overrides from the Alarm calendar (the one the phones use: any entry there also means
+# no phone alarm that day), for today and the next two days. An event whose title starts with
+# NWD (non-working day) or Home makes that date a Home day; Off, Out and Work also work, but an
+# Out or Work entry would silence the alarm too. The first event of a date wins. Node-RED reads
+# the `days` attribute ({"2026-10-26": "Home", ...}). The state says whether the calendar was
+# found, so a missing calendar shows up instead of failing silently.
 template:
   - triggers:
       - trigger: time_pattern
@@ -296,7 +298,7 @@ template:
         event_type: event_template_reloaded
     actions:
       - variables:
-          cal_id: calendar.heating
+          cal_id: calendar.alarm
       - action: calendar.get_events
         target:
           entity_id: "{{ cal_id }}"
@@ -325,6 +327,7 @@ template:
                   {% set hit = e.start <= day < e.end %}
                 {% endif %}
                 {% set word = ((e.summary | default('')).split(' ') | first | lower).strip(':,.-') %}
+                {% set word = 'home' if word == 'nwd' else word %}
                 {% if hit and day not in ns.d and word in ['work', 'home', 'out', 'off'] %}
                   {% set ns.d = dict(ns.d, **{day: word | capitalize}) %}
                 {% endif %}
