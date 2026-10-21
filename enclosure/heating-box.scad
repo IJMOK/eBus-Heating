@@ -185,11 +185,12 @@ module lid() {
     difference() {
         union() {
             translate([-wall, -wall, top]) rounded_block(W + 2 * wall, H + 2 * wall, r_out, lid_t, cb = edge, rt = lid_round);
-            // locating lip just inside the walls, cut back around the bosses
+            // locating lip just inside the walls, cut back around the bosses and the divider
             difference() {
                 translate([fit, fit, top - 3]) linear_extrude(3.01) rrect(W - 2 * fit, H - 2 * fit, r_in - fit);
                 translate([fit + 1.2, fit + 1.2, top - 4]) linear_extrude(5) rrect(W - 2 * fit - 2.4, H - 2 * fit - 2.4, max(r_in - fit - 1.2, 0.5));
                 for (c = corners) translate([c[0], c[1], top - 4]) cylinder(d = boss_d + 2, h = 5);
+                translate([mains_w - 1, -1, top - 4]) cube([div_t + 2, 4, 5]);
             }
             // tongues closing the cable slots down to just above each cable
             for (s = slots) translate([s[0] - s[1][0] / 2 - fit + 0.2, -wall, floor_t + s[1][1] + 0.3])
