@@ -1,6 +1,6 @@
-# Enclosure (Shelly 1 Gen4 + eBUS stick)
+# Heating box (Shelly 1 Gen4 + eBUS stick)
 
-A wall box for the Shelly 1 Gen4 and the eBUS Adapter Stick C6, screwed to the wall next to the boiler: **79 × 155 × 28.5 mm** outside, with 6 mm rounded corners, a rounded lid edge, a fine V line where the lid meets the base and a chamfered foot against the wall. Design: [`heating-box.scad`](heating-box.scad) (parametric OpenSCAD), sized from the parts measured on 2026-10-20. Measure your own parts and change the sizes at the top of the file if yours differ (a different flex, another stick case). Ready-to-print STLs are in [`stl/`](stl/).
+A wall box next to the boiler, **79 × 155 × 28.5 mm** outside, with 6 mm rounded corners, a rounded lid edge, a fine V line where the lid meets the base and a chamfered foot against the wall. Design: [`heating-box.scad`](heating-box.scad) (parametric OpenSCAD), sized from the parts measured on 2026-10-20. Ready-to-print STLs are in [`stl/`](stl/).
 
 - **Left side, mains:** the fused-spur flex to the Shelly's **L/N**, with its earth core in a Wago 221 in the pocket. A clamp bar holds the flex so a pull can't reach the terminals. No vents on this side.
 - **Right side, low voltage:** **O/I** to the boiler's 24V= RT, the eBUS pair, the stick and its USB-C lead. Vents are on the right-hand wall only.
@@ -25,12 +25,11 @@ A wall box for the Shelly 1 Gen4 and the eBUS Adapter Stick C6, screwed to the w
 - 1 × Wago 221-413 for the earth.
 
 ## Fitting
-**Isolate at the fused spur (fuse out) and prove it dead before touching L/N.** The wiring rules are in [`docs/02-wiring-safety.md`](../docs/02-wiring-safety.md). If you're not competent with mains, have an electrician do the L/N side.
+**Isolate at the fused spur (fuse out) and prove it dead before touching L/N.** The wiring rules are in the public repo's `docs/02-wiring-safety.md`. If you're not competent with mains, have an electrician do the L/N side.
 
+- The low-voltage clamp squeezes the round cable by 30 % and has two ridges on the floor either side of the bar, so the cable takes a slight S-bend. Tighten both screws evenly until the bar sits on its bosses.
 - The sheath of each cable must run past its clamp into the box. Only the cores go to the terminals, kept short, with no bare copper showing at the Shelly.
-- The design's flex is flat 2-core (5.5 × 3.3 mm), so there's no earth core and the Wago pocket isn't needed. Set `earth_pocket = false` to drop it, or just leave it empty. If you ever fit 3-core flex, its earth goes into a Wago there, since the Shelly has no earth terminal.
+- The flex is flat 2-core (5.5 × 3.3 mm), so there's no earth core and the Wago pocket isn't needed. Set `earth_pocket = false` to drop it, or just leave it empty. If you ever fit 3-core flex, its earth goes into a Wago there, since the Shelly has no earth terminal.
 - Flat flex that size is usually 0.5 mm², which is only rated 3 A: check that the spur's fuse is 3 A.
 - Unused **12V** and **SW** terminals: leave them empty, screws tightened down.
 - Keep mains cores in the left compartment and low-voltage cores in the right; only the last few mm at the Shelly's terminal strip cross.
-
-![Closed box](box-closed.png) ![Inside, with stand-ins for the parts](box-inside.png)

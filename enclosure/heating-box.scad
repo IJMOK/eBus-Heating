@@ -51,6 +51,9 @@ foot = 1;                  // chamfer round the bottom (wall side): neat edge, h
 lid_round = 1.8;           // rounded top edge of the lid
 gap = 0.6;                 // clearance around the Shelly and the stick
 fit = 0.3;                 // lid lip / slot tongue clearance
+// Cable clamps: [squeeze (fraction of the cable height), ridge width, ridge height, floor ridges]
+mains_grip = [0.15, 2, 1, false];
+lv_grip = [0.3, 3, 1.5, true]; // round cable: firmer squeeze plus two floor ridges for an S-bend
 mains_w = 30;              // mains compartment width
 lv_w = stick[0] + 22;      // low-voltage compartment width
 div_t = 2;
@@ -74,10 +77,10 @@ sh_x0 = x_div - shelly_split * shelly[0];
 stick_x0 = W - 3 - stick[0] - gap;
 usb_x = stick_x0 + (stick[0] + gap) / 2;
 mains_x = mains_w / 2;
-lv_x = mains_w + div_t + 9;                   // its clamp's left boss merges into the divider
 clamp_y = 14;
 mains_off = mains[0] / 2 + 5;                 // clamp screw offset from the cable centre
 lv_off = lv[0] / 2 + 4;
+lv_x = mains_w + div_t + lv_off + 4 + 0.5;    // the clamp bar's end clears the divider by 0.5 mm
 top = floor_t + inner_d;                      // rim height
 r_in = r_out - wall;
 bi = boss_d / 2 - 0.5;                        // bosses sink 0.5 mm into the walls (no line-only contact) and
@@ -117,14 +120,17 @@ module u_slot(x, c) {        // cable slot in the bottom wall, open towards the 
     }
 }
 
-function clamp_h(c) = floor_t + c[1] * 0.85 + 1; // boss top: the clamp's 1 mm ridge squeezes the sheath by 15 %
+function clamp_h(c, g) = floor_t + c[1] * (1 - g[0]) + g[2]; // boss top: the clamp's ridge squeezes the sheath by g[0]
 
-module clamp_bosses(x, c, off) {
+module clamp_bosses(x, c, off, g) {
     for (s = [-1, 1]) translate([x + s * off, clamp_y, 0])
         difference() {
-            cylinder(d = 7, h = clamp_h(c));
+            cylinder(d = 7, h = clamp_h(c, g));
             translate([0, 0, floor_t]) cylinder(d = self_tap, h = 20);
         }
+    // floor ridges just outside the bar: with its ridge in the middle they kink the cable
+    if (g[3]) for (s = [-1, 1]) translate([x - c[0] / 2 - 1, clamp_y + s * 4.75 - 0.75, 0])
+        cube([c[0] + 2, 1.5, floor_t + 1]);
 }
 
 module l_corner(sx, sy) {    // L-shaped locating rail around a corner of the Shelly
@@ -162,8 +168,8 @@ module base() {
                     translate([-1, 3, floor_t]) cube([wago[0] + 10, wago[1] - 6, 10]); // open sides for the wires
                 }
             // cable clamp bosses
-            clamp_bosses(mains_x, mains, mains_off);
-            clamp_bosses(lv_x, lv, lv_off);
+            clamp_bosses(mains_x, mains, mains_off, mains_grip);
+            clamp_bosses(lv_x, lv, lv_off, lv_grip);
         }
         // lid screw holes
         for (c = corners) translate([c[0], c[1], floor_t + 2]) cylinder(d = self_tap, h = top);
@@ -219,20 +225,20 @@ module lid() {
 }
 
 // ---- cable clamp bars (print flat)
-module clamp(c, off) {
+module clamp(c, off, g) {
     difference() {
         hull() for (s = [-1, 1]) translate([s * off, 0, 0]) cylinder(d = 8, h = 3);
         for (s = [-1, 1]) translate([s * off, 0, -1]) cylinder(d = m3_clear, h = 5);
     }
     // ridge that bites into the sheath
-    translate([-c[0] / 2, -1, -1]) cube([c[0], 2, 1]);
+    translate([-c[0] / 2, -g[1] / 2, -g[2]]) cube([c[0], g[1], g[2]]);
 }
 
 // ---- parts
 if (part == "base") base();
 else if (part == "lid") translate([0, 0, top + lid_t]) rotate([180, 0, 0]) lid();
-else if (part == "clamp_mains") translate([0, 0, 3]) rotate([180, 0, 0]) clamp(mains, mains_off); // ridge up
-else if (part == "clamp_lv") translate([0, 0, 3]) rotate([180, 0, 0]) clamp(lv, lv_off);
+else if (part == "clamp_mains") translate([0, 0, 3]) rotate([180, 0, 0]) clamp(mains, mains_off, mains_grip); // ridge up
+else if (part == "clamp_lv") translate([0, 0, 3]) rotate([180, 0, 0]) clamp(lv, lv_off, lv_grip);
 else if (part == "testfit") intersection() { base(); translate([-50, -50, 0]) cube([W + 100, H + 100, floor_t + 4]); }
 else {
     base();
@@ -244,6 +250,6 @@ else {
     for (s = slots) color(s[0] == mains_x ? "black" : "white")
         translate([s[0], 30, floor_t + s[1][1] / 2]) rotate([90, 0, 0]) linear_extrude(50) stadium(s[1]);
     if (earth_pocket) color("orange") translate([mains_x - wago[0] / 2, clamp_y + 14 + 1.2 + gap, floor_t]) cube(wago);
-    color("dimgrey") translate([mains_x, clamp_y, clamp_h(mains)]) clamp(mains, mains_off);
-    color("dimgrey") translate([lv_x, clamp_y, clamp_h(lv)]) clamp(lv, lv_off);
+    color("dimgrey") translate([mains_x, clamp_y, clamp_h(mains, mains_grip)]) clamp(mains, mains_off, mains_grip);
+    color("dimgrey") translate([lv_x, clamp_y, clamp_h(lv, lv_grip)]) clamp(lv, lv_off, lv_grip);
 }
