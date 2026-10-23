@@ -14,6 +14,12 @@ input_boolean:
     name: Heating away
     icon: mdi:airplane
     # On: hold heating_away_temp; warm up for heating_away_return, then switches itself off.
+  heating_fire:
+    name: Heating fire lit
+    icon: mdi:fireplace
+    # On while a fire is lit near the room sensor. Control carries on as normal (the boiler
+    # rests while the fire holds the room), but the day isn't learned from, and no warm-up is
+    # measured until 12 h after. The 03:00 nightly review turns it off.
   heating_optimum_start:
     name: Heating optimum start
     icon: mdi:clock-start

@@ -90,6 +90,13 @@ schedule takes over. Away days don't count in the nightly review. Without a retu
 it holds until you switch it off. If HA is down while you're away, the Shelly failsafe
 runs its own schedule (warmer than needed, never colder).
 
+**Fire lit** (`input_boolean.heating_fire`): for a room sensor near a fireplace or stove.
+Control carries on as normal, so the boiler rests while the fire holds the room (open doors
+spread the heat). Nothing is learned: the day doesn't count in the nightly review (a fire
+holding the set with little boiler would otherwise pull the curve down), and no warm-up is
+measured while it's on or for 12 hours after, since the next morning starts warm. The nightly
+review switches it off.
+
 When each period starts depends on **optimum start** (`input_boolean.heating_optimum_start`):
 
 - **Off** (default): the morning starts a fixed `heating_preheat_minutes` before the alarm;
