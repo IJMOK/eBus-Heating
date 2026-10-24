@@ -97,6 +97,15 @@ holding the set with little boiler would otherwise pull the curve down), and no 
 measured while it's on or for 12 hours after, since the next morning starts warm. The nightly
 review switches it off.
 
+**Heat on now / Heat off now** (`input_select.heating_override`): one-off changes by hand,
+e.g. someone is up early, or everyone stayed up late. *Heat on now* starts the next period of
+the day now, and it then runs to its normal end (nothing left today: the Home temperature until
+the Home end time, at least an hour). *Heat off now* skips the current period, or the next one if
+pressed at bedtime, until *Heat on now* is pressed, the period ends, or 3 hours past its start,
+so a forgotten Off can't leave the house cold all day. The select goes back to *Schedule* by
+itself; Away clears it. Periods touched by hand are not learned from: no warm-up rate, no
+day statistics, no integral.
+
 When each period starts depends on **optimum start** (`input_boolean.heating_optimum_start`):
 
 - **Off** (default): the morning starts a fixed `heating_preheat_minutes` before the alarm;

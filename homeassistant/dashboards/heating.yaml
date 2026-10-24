@@ -143,6 +143,7 @@ views:
               - entity: input_boolean.heating_holiday_home
               - entity: input_boolean.heating_away
               - entity: input_boolean.heating_fire
+              - entity: input_select.heating_override
               - entity: input_datetime.heating_away_return
               - entity: input_number.heating_away_temp
               - entity: input_boolean.heating_optimum_start

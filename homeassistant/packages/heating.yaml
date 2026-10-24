@@ -49,6 +49,16 @@ input_boolean:
     icon: mdi:fire-circle
 
 input_select:
+  heating_override:
+    name: Heating on/off by hand
+    icon: mdi:hand-back-right
+    # Set from the dashboard. Heat on now: the next period today starts now, then the schedule.
+    # Heat off now: skips the current/next period until Heat on now, its end, or 3 h. Node-RED
+    # sets it back to Schedule when done. Those periods aren't learned from.
+    options:
+      - Schedule
+      - Heat on now
+      - Heat off now
   heating_stage:
     name: Heating stage
     icon: mdi:stairs
