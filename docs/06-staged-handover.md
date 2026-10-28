@@ -52,9 +52,14 @@ The comfort guard keeps the flow at 60 °C until the room recovers.
 - **Comfort mode** button: 60 °C for 4 hours.
 - **Heating season** off (summer): no heat demand at all except comfort mode, and
   the Shelly failsafe keeps the relay off too.
-- **Before the first Stage 1 write**, check one `SetMode` by hand on your boiler
-  (flow setpoint taken, hot water unchanged), then set `ebusWriteEnabled: true` in
-  the Heating config node.
+- **Before the first Stage 1 write**, check `SetMode` on your boiler with
+  [`tools/setmode-check.py`](../tools/setmode-check.py) (about 20 minutes, someone at
+  the boiler). It sends a flow target below the panel setting, checks the boiler takes
+  it and fires at it, asks you to run a hot tap, then stops and times how long the
+  boiler keeps the target before going back to its own. Pass: the target is taken, hot
+  water is normal at the tap, and the boiler reverts by itself. Then set
+  `ebusWriteEnabled: true` in the Heating config node. See
+  [testing.md](testing.md#stage-1-checkpoint-setmode) for what a pass looked like here.
 - You can set `heating_stage`, the floor and the tunables by hand at any time.
 - **Set starting values** (Node-RED tab 42) resets everything to Stage 0 with the
   starting tunables.

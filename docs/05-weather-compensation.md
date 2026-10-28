@@ -145,4 +145,6 @@ aren't heating data. The integral and the comfort-guard timer pause while
 on every change. It always carries the boiler's hot-water setting, with both
 hot-water disable bits off. See [03-ebusd-setup.md](03-ebusd-setup.md).
 Writes are off until the Stage 1 checkpoint, which verifies the payload on the
-real boiler.
+real boiler ([`tools/setmode-check.py`](../tools/setmode-check.py)). If the
+re-sends stop, the boiler goes back to its panel setting by itself (about
+15 minutes here).

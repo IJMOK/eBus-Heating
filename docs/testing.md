@@ -20,6 +20,21 @@ the date in the last column. Repeat after any firmware or flow change.
 
 Restore everything after each test (battery back in, add-ons running, `heating_live` back on).
 
+## Stage 1 checkpoint: SetMode
+
+Run once, before setting `ebusWriteEnabled: true`, with
+[`tools/setmode-check.py`](../tools/setmode-check.py). The heating must be calling,
+so raise the set point a little (stay within 0.5 °C of the room so it doesn't
+count as a short day). Pass `--hwc` exactly as the panel shows it.
+
+| Check | Expected | Result (2026-10-28, combi, panel 60 °C flow / 50 °C hot water, sent 55 °C) |
+|---|---|---|
+| ebusd echo on `ebusd/bai/SetMode` | Sent values, all disable bits 0 | ✅ `auto`, 55, 50, disable bits 0 |
+| Boiler takes the target | `FlowTempDesired` = sent value | ✅ 60 → 55 within about 2 min, before the relay closed |
+| Burner fires at it | Flame on, target still the sent value | ✅ relay on 19:03, flame on, 17 % modulation |
+| Hot tap during the test | `HwcDemand` yes, normal hot water, back to heating after | ✅ flow up to about 64 °C during the draw (boiler's own hot-water control), heating resumed when the tap closed |
+| Stop sending | Boiler goes back to its own target by itself | ✅ back to 60 about 15 min after the last send (19:08 → 19:23), so no extra failsafe needed |
+
 ## Bench results (relay not wired)
 
 | Date | Test | Result |

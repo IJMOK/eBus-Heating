@@ -170,7 +170,19 @@ hcmode;flowtempdesired;hwctempdesired;hwcflowtempdesired;ign;disablehc;disablehw
   `hwctempdesired` overrides the panel's hot-water setting. Send the hot-water
   setpoint your panel already uses, with both disable bits at 0.
 - The boiler drops back to its own settings if the message isn't repeated, so
-  the control flow re-sends it every few minutes.
+  the control flow re-sends it every few minutes. On the BAI00 tested here it
+  held the last target for **about 15 minutes** after the last send. So if HA or
+  Node-RED stops, the boiler is back on its panel setting within 15 minutes with
+  no extra failsafe. Measure yours with
+  [`tools/setmode-check.py`](../tools/setmode-check.py): if it never reverts,
+  you need a failsafe that sends the panel value.
+- `FlowTempDesired` shows the target the boiler accepted, within a minute or two
+  and even while it isn't firing. ebusd also publishes its decoded copy of what
+  went on the bus to `ebusd/bai/SetMode`. Check that `disablehwctapping` reads 0
+  there.
+- On a combi, a hot-water draw runs the flow well above the heating target
+  (about 64 °C here). That's the boiler's own hot-water control, not the
+  SetMode target being ignored.
 
 ### ⚠️ `--accesslevel=*` exposes installer parameters
 
