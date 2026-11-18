@@ -26,7 +26,10 @@
 | `43 Heating - Heartbeat` | Every 60 s while live: heartbeat to the Shelly failsafe (KVS over MQTT RPC), plus the heating season (`fs_season`). Mirrors the Shelly's failsafe mode into HA |
 
 Tab 40 also runs the ebusd watchdog (no bus signal, or no flow temperature for
-10 min = eBUS down). The control law writes a one-line status, and the next heating
+10 min = eBUS down). The control loop falls back to the panel flow at once, but the
+phones are only told once eBUS has been down for 3 minutes, and "eBUS is back" only
+follows an "eBUS lost". Shorter drops (a Wi-Fi blip on a stick behind a repeater heals
+in about 20 s) go to the logbook as "eBUS blip". The control law writes a one-line status, and the next heating
 block, to `input_text.heating_status` / `heating_next`.
 
 **Dry-run:** `input_boolean.heating_live` off means everything is calculated and
